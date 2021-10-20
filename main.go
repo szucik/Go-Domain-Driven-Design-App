@@ -2,23 +2,24 @@ package main
 
 import (
 	"context"
-	"github.com/zlyjoker102/simple-rest-api/handlers"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
+
+	"github.com/zlyjoker102/simple-rest-api/handlers"
 )
 
 func main() {
 	l := log.New(os.Stdout, "logger", log.LstdFlags)
 	hh := handlers.NewArticle(l)
-	//hu := handlers.NewUser(l)
+	hu := handlers.NewUser(l)
 	hc := handlers.NewCurrency(l)
 
 	sm := http.NewServeMux()
 	sm.Handle("/", hh)
-	//sm.Handle("/user", hu)
+	sm.Handle("/user", hu)
 	sm.Handle("/currency", hc)
 
 	s := &http.Server{
@@ -35,6 +36,7 @@ func main() {
 			l.Fatal(err)
 		}
 	}()
+
 	sigChan := make(chan os.Signal)
 	signal.Notify(sigChan, os.Interrupt)
 	signal.Notify(sigChan, os.Kill)
