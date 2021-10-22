@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 	"os"
@@ -13,15 +14,24 @@ import (
 
 func main() {
 	l := log.New(os.Stdout, "logger", log.LstdFlags)
-	hh := handlers.NewArticle(l)
-	hu := handlers.NewUser(l)
-	hc := handlers.NewCurrency(l)
 
-	sm := http.NewServeMux()
-	sm.Handle("/", hh)
-	sm.Handle("/user", hu)
-	sm.Handle("/currency", hc)
+	uh := handlers.NewUser(l)
+	sm := mux.NewRouter()
 
+	getRouter := sm.Methods(http.MethodGet).Subrouter()
+	getRouter.HandleFunc("/users", uh.GetUsers)
+
+	postRouter := sm.Methods(http.MethodPost).Subrouter()
+	postRouter.HandleFunc("/users", uh.AddUser)
+	postRouter.Use(uh.MiddlewareUserValid)
+
+	putRouter := sm.Methods(http.MethodPut).Subrouter()
+	putRouter.HandleFunc("/users/{id:[0-9]+}", uh.UpdateUser)
+	putRouter.Use(uh.MiddlewareUserValid)
+
+
+	deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
+	deleteRouter.HandleFunc("/users/{id:[0-9]+}", uh.DeleteUser)
 	s := &http.Server{
 		Addr:           ":8080",
 		Handler:        sm,
@@ -40,9 +50,11 @@ func main() {
 	sigChan := make(chan os.Signal)
 	signal.Notify(sigChan, os.Interrupt)
 	signal.Notify(sigChan, os.Kill)
+
 	sig := <-sigChan
 	l.Println("Recived terminate, graceful shutdown", sig)
 	s.ListenAndServe()
-	tc, _ := context.WithTimeout(context.Background(), 30*time.Second)
-	s.Shutdown(tc)
+
+	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	s.Shutdown(ctx)
 }
