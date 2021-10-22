@@ -3,20 +3,27 @@ package data
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/go-playground/validator/v10"
 	"io"
 	"time"
 )
 var ErrUserNotFound = fmt.Errorf("user not found")
+
 type User struct {
 	ID int `json:"id"`
-	Name string `json:"name"`
+	Name string `json:"name" validate:"required"`
 	Surname string `json:"surname"`
-	Email string `json:"email"`
+	Email string `json:"email" validate:"email"`
 	Created string `json:"-"`
 	Updated string `json:"-"`
 }
 
 type Users []*User
+
+func (u *User) Validate() error {
+	v := validator.New()
+	return v.Struct(u)
+}
 
 func GetUsers() Users {
 	return usersList
@@ -52,6 +59,14 @@ func UpdateUser(id int, u * User) error {
 	return nil
 }
 
+func DeleteUser(id int) error	 {
+	_, pos, err := findUser(id)
+	if err != nil {
+		return err
+	}
+	usersList = append(usersList[0:pos], usersList[pos+1:]...)
+	return nil
+}
 
 func findUser(id int) (*User, int, error) {
 	for i, user := range usersList {
