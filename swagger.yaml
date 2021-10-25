@@ -1,0 +1,77 @@
+basePath: /
+consumes:
+- application/json
+definitions:
+  User:
+    description: User represents the user for this application
+    properties:
+      id:
+        description: the id for this user
+        format: int64
+        minimum: 1
+        type: integer
+        x-go-name: ID
+      login:
+        description: the email address for this user
+        example: user@provider.net
+        type: string
+        x-go-name: Email
+      name:
+        description: the name for this user
+        minLength: 3
+        type: string
+        x-go-name: Name
+      surname:
+        type: string
+        x-go-name: Surname
+    required:
+    - id
+    - name
+    - login
+    type: object
+    x-go-package: github.com/zlyjoker102/simple-rest-api/data
+info:
+  description: Documentation for User API
+  title: of User API
+  version: 1.0.0
+paths:
+  /users:
+    get:
+      description: Return a list of users from the database
+      operationId: listUsers
+      responses:
+        "200":
+          $ref: '#/responses/usersResponse'
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      description: Return a list of users from the database
+      operationId: deleteUser
+      parameters:
+      - description: The id of user delete from database
+        format: int64
+        in: path
+        name: id
+        required: true
+        type: integer
+        x-go-name: ID
+      responses:
+        "201":
+          $ref: '#/responses/noContent'
+      tags:
+      - users
+produces:
+- application/json
+responses:
+  noContent:
+    description: ""
+  usersResponse:
+    description: A list of users returns in the response
+    schema:
+      items:
+        $ref: '#/definitions/User'
+      type: array
+schemes:
+- http
+swagger: "2.0"
