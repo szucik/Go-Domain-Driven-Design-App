@@ -1,3 +1,18 @@
+// Package classification of User API
+//
+// Documentation for User API
+//
+//	Schemes: http
+//	BasePath: /
+//	Version: 1.0.0
+//
+//	Consumes:
+//	- application/json
+//
+//	Produces:
+//	- application/json
+//
+// swagger:meta
 package handlers
 
 import (
@@ -9,11 +24,33 @@ import (
 	"strconv"
 )
 
+//A list of users returns in the response
+// swagger:response usersResponse
+type usersResponseWrapper struct {
+	//All users in the system
+	//in: body
+	Body []data.User
+}
+
+// swagger:response noContent
+type usersNoContent struct {
+}
+
+//swagger:parameters deleteUser
+type usersIDParameterWrapper struct {
+	//The id of user delete from database
+	//	in:path
+	//	required: true
+	ID int `json:"id"`
+}
+
+//Users is a http.Handler
 type Users struct {
 	l *log.Logger
 }
 type KeyUser struct{}
 
+//NewUser creates a users handler with the given logger
 func NewUser(l *log.Logger) *Users {
 	return &Users{l}
 }
@@ -24,7 +61,14 @@ func (u *Users) AddUser(rw http.ResponseWriter, r *http.Request) {
 	data.AddUser(&user)
 }
 
-func (u *Users) DeleteUser(rw http.ResponseWriter, r *http.Request)  {
+// swagger:route DELETE /users/{id} users deleteUser
+// Return a list of users from the database
+// responses:
+//	201: noContent
+
+// DeleteUser deletes a user from DB
+
+func (u *Users) DeleteUser(rw http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["id"])
 	if err != nil {
@@ -56,15 +100,6 @@ func (u *Users) UpdateUser(rw http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(rw, "User not found", http.StatusInternalServerError)
 		return
-	}
-}
-
-func (u *Users) GetUsers(rw http.ResponseWriter, r *http.Request) {
-	u.l.Println("Handle GET Users")
-	lu := data.GetUsers()
-	err := lu.ToJSON(rw)
-	if err != nil {
-		http.Error(rw, "Unable to marshal json", http.StatusInternalServerError)
 	}
 }
 

@@ -7,13 +7,28 @@ import (
 	"io"
 	"time"
 )
+
 var ErrUserNotFound = fmt.Errorf("user not found")
 
+// User represents the user for this application
+//
+// swagger:model
 type User struct {
+	// the id for this user
+	//
+	// required: true
+	// min: 1
 	ID int `json:"id"`
-	Name string `json:"name" validate:"required"`
+	// the name for this user
+	// required: true
+	// min length: 3
+	Name    string `json:"name" validate:"required"`
 	Surname string `json:"surname"`
-	Email string `json:"email" validate:"email"`
+	// the email address for this user
+	//
+	// required: true
+	// example: user@provider.net
+	Email   string `json:"login" validate:"email"`
 	Created string `json:"-"`
 	Updated string `json:"-"`
 }
@@ -29,12 +44,12 @@ func GetUsers() Users {
 	return usersList
 }
 
-func (u * User) FromJSON(r io.Reader) error {
+func (u *User) FromJSON(r io.Reader) error {
 	e := json.NewDecoder(r)
 	return e.Decode(u)
 }
 
-func (u * Users) ToJSON(w io.Writer) error {
+func (u *Users) ToJSON(w io.Writer) error {
 	e := json.NewEncoder(w)
 	return e.Encode(u)
 }
@@ -49,7 +64,7 @@ func getNextID() int {
 	return lu.ID + 1
 }
 
-func UpdateUser(id int, u * User) error {
+func UpdateUser(id int, u *User) error {
 	_, pos, err := findUser(id)
 	if err != nil {
 		return err
@@ -59,7 +74,7 @@ func UpdateUser(id int, u * User) error {
 	return nil
 }
 
-func DeleteUser(id int) error	 {
+func DeleteUser(id int) error {
 	_, pos, err := findUser(id)
 	if err != nil {
 		return err
@@ -70,7 +85,7 @@ func DeleteUser(id int) error	 {
 
 func findUser(id int) (*User, int, error) {
 	for i, user := range usersList {
-		if user.ID == id{
+		if user.ID == id {
 			return user, i, nil
 		}
 	}
@@ -79,16 +94,15 @@ func findUser(id int) (*User, int, error) {
 
 var usersList = []*User{
 	&User{
-		ID: 1,
+		ID:      1,
 		Name:    "Janusz",
 		Surname: "Koalski",
 		Email:   "janusz@wp.pl",
 		Created: time.Now().UTC().String(),
 		Updated: time.Now().UTC().String(),
-
 	},
 	&User{
-		ID: 2,
+		ID:      2,
 		Name:    "Tomasz",
 		Surname: "Jakut",
 		Email:   "tj@gmail.pl",

@@ -4,8 +4,8 @@ import "testing"
 
 func TestValidation(t *testing.T) {
 	u := &User{
-		Name:    "scscs",
-		Email:   "scss@wp.pl",
+		Name:  "test",
+		Email: "test@test.pl",
 	}
 
 	err := u.Validate()

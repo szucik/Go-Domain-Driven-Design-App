@@ -2,14 +2,15 @@ package main
 
 import (
 	"context"
+	"github.com/go-openapi/runtime/middleware"
+	gohandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/zlyjoker102/simple-rest-api/handlers"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
-
-	"github.com/zlyjoker102/simple-rest-api/handlers"
 )
 
 func main() {
@@ -29,12 +30,20 @@ func main() {
 	putRouter.HandleFunc("/users/{id:[0-9]+}", uh.UpdateUser)
 	putRouter.Use(uh.MiddlewareUserValid)
 
-
 	deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
 	deleteRouter.HandleFunc("/users/{id:[0-9]+}", uh.DeleteUser)
+
+	// handler for documentation
+	opts := middleware.RedocOpts{SpecURL: "/swagger.yaml"}
+	sh := middleware.Redoc(opts, nil)
+
+	// CORS
+	ch := gohandlers.CORS(gohandlers.AllowedOrigins([]string{"localhost:3000"}))
+	getRouter.Handle("/docs", sh)
+	getRouter.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
 	s := &http.Server{
 		Addr:           ":8080",
-		Handler:        sm,
+		Handler:        ch(sm),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,
 		MaxHeaderBytes: 1 << 20,
