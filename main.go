@@ -5,7 +5,7 @@ import (
 	"github.com/go-openapi/runtime/middleware"
 	gohandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/zlyjoker102/simple-rest-api/handlers"
+	"github.com/szucik/go-simple-rest-api/handlers"
 	"log"
 	"net/http"
 	"os"
