@@ -18,7 +18,7 @@ package handlers
 import (
 	"context"
 	"github.com/gorilla/mux"
-	"github.com/zlyjoker102/simple-rest-api/data"
+	"github.com/szucik/go-simple-rest-api/data"
 	"log"
 	"net/http"
 	"strconv"
