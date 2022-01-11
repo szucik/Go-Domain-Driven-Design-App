@@ -29,7 +29,7 @@ definitions:
     - name
     - login
     type: object
-    x-go-package: github.com/zlyjoker102/simple-rest-api/data
+    x-go-package: github.com/szucik/go-simple-rest-api/data
 info:
   description: Documentation for User API
   title: of User API
