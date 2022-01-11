@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"github.com/zlyjoker102/simple-rest-api/data"
+	"github.com/szucik/go-simple-rest-api/data"
 	"net/http"
 )
 
