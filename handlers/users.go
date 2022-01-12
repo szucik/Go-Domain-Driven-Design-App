@@ -17,6 +17,7 @@ package handlers
 
 import (
 	"context"
+	"database/sql"
 	"github.com/gorilla/mux"
 	"github.com/szucik/go-simple-rest-api/data"
 	"log"
@@ -46,19 +47,36 @@ type usersIDParameterWrapper struct {
 
 //Users is a http.Handler
 type Users struct {
-	l *log.Logger
+	l  *log.Logger
+	db *sql.DB
 }
 type KeyUser struct{}
 
 //NewUser creates a users handler with the given logger
-func NewUser(l *log.Logger) *Users {
-	return &Users{l}
+func NewUser(l *log.Logger, db *sql.DB) *Users {
+	return &Users{l, db}
 }
 
 func (u *Users) AddUser(rw http.ResponseWriter, r *http.Request) {
-	u.l.Println("Handle POST Users")
+	u.l.Println("Handle Add User")
 	user := r.Context().Value(KeyUser{}).(data.User)
 	data.AddUser(&user)
+}
+
+// swagger:route GET /users users listUsers
+// Return a list of users from the database
+// responses:
+//	200: usersResponse
+
+// GetUsers returns Users from data store
+func (u *Users) GetUsers(rw http.ResponseWriter, r *http.Request) {
+	u.l.Println("Handle GET Users")
+	rw.Header().Add("Content-Type", "application/json")
+	lu := data.GetUsers()
+	err := lu.ToJSON(rw)
+	if err != nil {
+		http.Error(rw, "Unable to marshal json", http.StatusInternalServerError)
+	}
 }
 
 // swagger:route DELETE /users/{id} users deleteUser

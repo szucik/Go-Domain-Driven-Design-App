@@ -1,10 +1,13 @@
 package data
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"github.com/go-playground/validator/v10"
 	"io"
+	"io/ioutil"
+	"net/http"
 	"time"
 )
 
@@ -54,9 +57,29 @@ func (u *Users) ToJSON(w io.Writer) error {
 	return e.Encode(u)
 }
 
-func AddUser(u *User) {
-	u.ID = getNextID()
-	usersList = append(usersList, u)
+//func AddUser(u *User) {
+//	u.ID = getNextID()
+//	usersList = append(usersList, u)
+//}
+
+func AddUser(db *sql.DB, w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	stmt, err := db.Prepare("INSERT INTO posts(title) VALUES(?)")
+	if err != nil {
+		panic(err.Error())
+	}
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		panic(err.Error())
+	}
+	keyVal := make(map[string]string)
+	json.Unmarshal(body, &keyVal)
+	title := keyVal["title"]
+	_, err = stmt.Exec(title)
+	if err != nil {
+		panic(err.Error())
+	}
+	fmt.Fprintf(w, "New post was created")
 }
 
 func getNextID() int {

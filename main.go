@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"github.com/go-openapi/runtime/middleware"
+	_ "github.com/go-sql-driver/mysql"
 	gohandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/szucik/go-simple-rest-api/handlers"
@@ -13,9 +15,16 @@ import (
 	"time"
 )
 
+var db *sql.DB
+var err error
+
 func main() {
 	l := log.New(os.Stdout, "logger", log.LstdFlags)
-
+	db, err = sql.Open("mysql", "root:bebiko102@tcp(127.0.0.1:3306)/tradehelper")
+	if err != nil {
+		panic(err.Error())
+	}
+	defer db.Close()
 	uh := handlers.NewUser(l)
 	sm := mux.NewRouter()
 
