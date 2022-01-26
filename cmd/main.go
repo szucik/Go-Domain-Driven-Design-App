@@ -2,12 +2,13 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"github.com/go-openapi/runtime/middleware"
 	_ "github.com/go-sql-driver/mysql"
 	gohandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
-	"github.com/szucik/go-simple-rest-api/handlers"
+	"github.com/szucik/go-simple-rest-api/internal/data"
+	"github.com/szucik/go-simple-rest-api/internal/database"
+	"github.com/szucik/go-simple-rest-api/internal/handlers"
 	"log"
 	"net/http"
 	"os"
@@ -15,23 +16,23 @@ import (
 	"time"
 )
 
-var db *sql.DB
-var err error
-
 func main() {
 	l := log.New(os.Stdout, "logger", log.LstdFlags)
-	db, err = sql.Open("mysql", "root:bebiko102@tcp(127.0.0.1:3306)/tradehelper")
+	dc, err := database.Connect()
 	if err != nil {
 		panic(err.Error())
 	}
-	defer db.Close()
-	uh := handlers.NewUser(l)
+	defer dc.Close()
+	db := data.NewDatabase(dc)
+	uh := handlers.NewUsers(l, db)
+
 	sm := mux.NewRouter()
 
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/users", uh.GetUsers)
 
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
+	postRouter.HandleFunc("/login", uh.Login)
 	postRouter.HandleFunc("/users", uh.AddUser)
 	postRouter.Use(uh.MiddlewareUserValid)
 

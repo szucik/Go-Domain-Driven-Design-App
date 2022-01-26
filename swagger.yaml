@@ -11,23 +11,25 @@ definitions:
         minimum: 1
         type: integer
         x-go-name: ID
-      login:
+      email:
         description: the email address for this user
         example: user@provider.net
         type: string
         x-go-name: Email
-      name:
+      username:
         description: the name for this user
         minLength: 3
         type: string
-        x-go-name: Name
-      surname:
-        type: string
-        x-go-name: Surname
+        x-go-name: Username
+      password:
+        minLength: 8
+          type: string
+          x-go-name: Password
     required:
     - id
-    - name
-    - login
+    - username
+    - email
+    - password
     type: object
     x-go-package: github.com/szucik/go-simple-rest-api/data
 info:
