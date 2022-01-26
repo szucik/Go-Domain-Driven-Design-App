@@ -1,0 +1,8 @@
+CREATE TABLE `tradehelper`.`xxx` (
+  `Id` INT NOT NULL AUTO_INCREMENT,
+  `name` VARCHAR(45) NULL,
+  `email` VARCHAR(45) NULL,
+  PRIMARY KEY (`Id`),
+  UNIQUE INDEX `Id_UNIQUE` (`Id` ASC) VISIBLE,
+  UNIQUE INDEX `name_UNIQUE` (`name` ASC) VISIBLE,
+  UNIQUE INDEX `email_UNIQUE` (`email` ASC) VISIBLE);
