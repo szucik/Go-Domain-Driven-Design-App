@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	data2 "github.com/szucik/go-simple-rest-api/internal/data"
+	datastruct "github.com/szucik/go-simple-rest-api/internal/data"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
@@ -33,7 +33,7 @@ var ErrHash = errors.New("Problem with hashing your password")
 type usersResponseWrapper struct {
 	//All users in the system
 	//in: body
-	Body []data2.User
+	Body []datastruct.User
 }
 
 // swagger:response noContent
@@ -51,18 +51,13 @@ type usersIDParameterWrapper struct {
 //Users is a http.Handler
 type Users struct {
 	l  *log.Logger
-	db *data2.Database
+	db *datastruct.Database
 }
 type KeyUser struct{}
 
 //NewUsers creates a users handler with the given logger
-func NewUsers(l *log.Logger, db *data2.Database) *Users {
+func NewUsers(l *log.Logger, db *datastruct.Database) *Users {
 	return &Users{l, db}
-}
-
-func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
-	rc := r.Context().Value(KeyUser{}).(data2.User)
-	fmt.Println(rc)
 }
 
 func HashPassword(password string) (string, error) {
@@ -72,14 +67,14 @@ func HashPassword(password string) (string, error) {
 
 func (u *Users) AddUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	rc := r.Context().Value(KeyUser{}).(data2.User)
+	rc := r.Context().Value(KeyUser{}).(datastruct.User)
 
 	hash, err := HashPassword(rc.Password)
 	if err != nil {
 		fmt.Errorf("%s", ErrHash)
 	}
 
-	user := &data2.User{
+	user := &datastruct.User{
 		Username:  rc.Username,
 		Email:     rc.Email,
 		Password:  hash,
@@ -163,7 +158,7 @@ func (u *Users) UpdateUser(rw http.ResponseWriter, r *http.Request) {
 
 func (u *Users) MiddlewareUserValid(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		usr := &data2.User{}
+		usr := &datastruct.User{}
 		err := usr.FromJSON(r.Body)
 		if err != nil {
 			u.l.Println("[ERROR] deserializing user", err)

@@ -25,17 +25,19 @@ func main() {
 	defer dc.Close()
 	db := data.NewDatabase(dc)
 	uh := handlers.NewUsers(l, db)
+	a := handlers.NewAuth(l, db)
 
 	sm := mux.NewRouter()
-
+	//Auth
+	authRouter := sm.Methods(http.MethodPost).Subrouter()
+	authRouter.HandleFunc("/login", a.Login)
+	authRouter.Use(a.MiddlewareAuthValid)
+	//Users
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/users", uh.GetUsers)
-
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
-	postRouter.HandleFunc("/login", uh.Login)
 	postRouter.HandleFunc("/users", uh.AddUser)
 	postRouter.Use(uh.MiddlewareUserValid)
-
 	putRouter := sm.Methods(http.MethodPut).Subrouter()
 	putRouter.HandleFunc("/users/{id:[0-9]+}", uh.UpdateUser)
 	putRouter.Use(uh.MiddlewareUserValid)

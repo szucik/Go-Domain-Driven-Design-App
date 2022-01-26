@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"github.com/go-playground/validator/v10"
 	"github.com/go-sql-driver/mysql"
 	"io"
 )
@@ -14,6 +15,11 @@ type Database struct {
 
 func NewDatabase(db *sql.DB) *Database {
 	return &Database{db}
+}
+
+func Validate(i interface{}) error {
+	v := validator.New()
+	return v.Struct(i)
 }
 
 // ToJSON serializes the given interface into a string based JSON format
