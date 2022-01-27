@@ -31,10 +31,13 @@ func main() {
 	//Auth
 	authRouter := sm.Methods(http.MethodPost).Subrouter()
 	authRouter.HandleFunc("/login", a.Login)
-	authRouter.Use(a.MiddlewareAuthValid)
+	authRouter.Use(a.MiddlewareLoginValid)
 	//Users
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/users", uh.GetUsers)
+	getRouter.HandleFunc("/", uh.Dashboard)
+	getRouter.Use(a.MiddlewareAuth)
+
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/users", uh.AddUser)
 	postRouter.Use(uh.MiddlewareUserValid)

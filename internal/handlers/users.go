@@ -121,39 +121,14 @@ func (u *Users) GetUsers(rw http.ResponseWriter, r *http.Request) {
 
 // DeleteUser deletes a user from DB
 
-func (u *Users) DeleteUser(rw http.ResponseWriter, r *http.Request) {
-	//vars := mux.Vars(r)
-	//id, err := strconv.Atoi(vars["id"])
-	//if err != nil {
-	//	http.Error(rw, "Unable to convert id", http.StatusBadRequest)
-	//	return
-	//}
-	//err = data.DeleteUser(id)
-	//if err == data.ErrUserNotFound {
-	//	http.Error(rw, "User not found", http.StatusNotFound)
-	//	return
-	//}
-}
+func (u *Users) DeleteUser(rw http.ResponseWriter, r *http.Request) {}
 
-func (u *Users) UpdateUser(rw http.ResponseWriter, r *http.Request) {
-	//vars := mux.Vars(r)
-	//id, err := strconv.Atoi(vars["id"])
-	//if err != nil {
-	//	http.Error(rw, "Unable to convert id", http.StatusBadRequest)
-	//	return
-	//}
-	//
-	//user := r.Context().Value(KeyUser{}).(data.User)
-	//
-	//err = data.UpdateUser(id, &user)
-	//if err == data.ErrUserNotFound {
-	//	http.Error(rw, "User not found", http.StatusNotFound)
-	//	return
-	//}
-	//if err != nil {
-	//	http.Error(rw, "User not found", http.StatusInternalServerError)
-	//	return
-	//}
+func (u *Users) UpdateUser(rw http.ResponseWriter, r *http.Request) {}
+
+func (u *Users) Dashboard(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "application/json")
+	//TODO Remember about Authorization cookies in client
+	rw.Write([]byte("Welcom in dashboard"))
 }
 
 func (u *Users) MiddlewareUserValid(next http.Handler) http.Handler {
