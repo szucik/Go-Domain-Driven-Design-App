@@ -2,101 +2,143 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/golang-jwt/jwt"
-	data2 "github.com/szucik/go-simple-rest-api/internal/data"
+	th_data "github.com/szucik/go-simple-rest-api/internal/data"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
 	"time"
 )
 
+//var ErrUserPass = errors.New("")
+
 //Users is a http.Handler
 type Auth struct {
 	l  *log.Logger
-	db *data2.Database
+	db *th_data.Database
 }
 
 //NewUsers creates a users handler with the given logger
-func NewAuth(l *log.Logger, db *data2.Database) *Auth {
+func NewAuth(l *log.Logger, db *th_data.Database) *Auth {
 	return &Auth{l, db}
 }
 
-type KeyAuth struct {
+type keyAuth struct {
 }
 
-var jwtKey = []byte("my_secret_key")
+type JwtErrorMessage struct {
+	message string
+}
+
+var (
+	accessKey  = []byte("my_secret_key")
+	refreshKey = []byte("dupa")
+	domain     = "tradehelper.io"
+)
+
+type customClaims struct {
+	Username string `json:"username"`
+	jwt.StandardClaims
+}
+
+type jwtDetails struct {
+	userName  string
+	secretKey interface{}
+	expiresAt time.Time
+}
+
+func newJwtToken(claims jwtDetails) (string, error) {
+	c := customClaims{
+		claims.userName,
+		jwt.StandardClaims{
+			ExpiresAt: claims.expiresAt.Unix(),
+			Issuer:    domain,
+		},
+	}
+
+	newJwt := jwt.NewWithClaims(jwt.SigningMethodHS256, c)
+
+	jwtString, err := newJwt.SignedString(claims.secretKey)
+	if err != nil {
+		return "", err
+	}
+
+	return jwtString, nil
+}
 
 func CheckPasswordHash(password, hash string) bool {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return err == nil
 }
 
-var hmacSampleSecret []byte
-
 func (a *Auth) Login(rw http.ResponseWriter, r *http.Request) {
-	auth := r.Context().Value(KeyAuth{}).(data2.Auth)
+	auth := r.Context().Value(keyAuth{}).(th_data.Auth)
 	usr, err := a.db.Login(auth.Email)
 	if err != nil {
-		fmt.Println(err)
+		rw.WriteHeader(http.StatusUnauthorized)
+		msg := fmt.Sprintf("%v", err)
+		json.NewEncoder(rw).Encode(map[string]string{"message": msg})
+		return
 	}
+
 	match := CheckPasswordHash(auth.Password, usr.Password)
 	if !match {
 		http.Error(rw, "Unable to unmarshal json", http.StatusNotFound)
 	}
-	type MyCustomClaims struct {
-		Foo string `json:"foo"`
-		jwt.StandardClaims
+
+	tClaims := jwtDetails{
+		userName:  usr.Username,
+		secretKey: accessKey,
+		expiresAt: time.Now().Add(5 * time.Minute),
 	}
-	// Create the Claims
-	expirationTime := time.Now().Add(5 * time.Minute)
-	claims := MyCustomClaims{
-		"jwt",
-		jwt.StandardClaims{
-			ExpiresAt: expirationTime.Unix(),
-			Issuer:    "test",
-		},
+	access, err := newJwtToken(tClaims)
+	if err != nil {
+		fmt.Errorf("JWT error: %w", err)
 	}
 
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err := token.SignedString(jwtKey)
-	if err != nil {
-		// If there is an error in creating the JWT return an internal server error
-		rw.WriteHeader(http.StatusInternalServerError)
-		return
-	}
 	http.SetCookie(rw, &http.Cookie{
 		Name:    "Authorization",
-		Value:   tokenString,
-		Expires: expirationTime,
+		Value:   access,
+		Expires: tClaims.expiresAt,
 	})
-}
 
-type Claims struct {
-	Username string `json:"username"`
-	jwt.StandardClaims
+	tClaims.secretKey = refreshKey
+	tClaims.expiresAt = time.Now().Add(1 * time.Duration(24*time.Hour))
+	refresh, err := newJwtToken(tClaims)
+	if err != nil {
+		fmt.Errorf("JWT error: %w", err)
+	}
+
+	http.SetCookie(rw, &http.Cookie{
+		Name:     "Refresh",
+		Value:    refresh,
+		SameSite: 2,
+		HttpOnly: true,
+		Expires:  tClaims.expiresAt,
+		Secure:   true,
+	})
 }
 
 func (a *Auth) MiddlewareLoginValid(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		usr := &data2.Auth{}
-		err := data2.FromJSON(usr, r.Body)
+		usr := &th_data.Auth{}
+		err := th_data.FromJSON(usr, r.Body)
 		if err != nil {
 			a.l.Println("[ERROR] deserializing user", err)
 			http.Error(rw, "Unable to unmarshal json", http.StatusBadRequest)
 			return
 		}
-		err = data2.Validate(usr)
+		err = th_data.Validate(usr)
 		if err != nil {
 			a.l.Println("[ERROR] validate user", err)
 			http.Error(rw, "Unable validate user", http.StatusBadRequest)
 			return
 		}
-		ctx := context.WithValue(r.Context(), KeyAuth{}, *usr)
-		fmt.Println(ctx)
-		r = r.WithContext(ctx)
 
+		ctx := context.WithValue(r.Context(), keyAuth{}, *usr)
+		r = r.WithContext(ctx)
 		next.ServeHTTP(rw, r)
 	})
 }
@@ -107,19 +149,17 @@ func (a *Auth) MiddlewareAuth(next http.Handler) http.Handler {
 		if err != nil {
 			if err == http.ErrNoCookie {
 				rw.WriteHeader(http.StatusUnauthorized)
-				http.Redirect(rw, r, "/login", http.StatusFound)
 				return
 			}
-			// For any other type of error, return a bad request status
 			rw.WriteHeader(http.StatusBadRequest)
-			//http.Redirect(rw, r, "/login", http.StatusFound) ??
 			return
 		}
 
 		tknStr := c.Value
-		claims := &Claims{}
+		claims := &customClaims{}
+
 		tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
-			return jwtKey, nil
+			return accessKey, nil
 		})
 		if err != nil {
 			if err == jwt.ErrSignatureInvalid {

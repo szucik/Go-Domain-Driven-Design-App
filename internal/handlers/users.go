@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	datastruct "github.com/szucik/go-simple-rest-api/internal/data"
+	"github.com/szucik/go-simple-rest-api/internal/utils"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
@@ -34,6 +35,16 @@ type usersResponseWrapper struct {
 	//All users in the system
 	//in: body
 	Body []datastruct.User
+}
+
+var ErrUserAlreadyExists = fmt.Sprintf("User already exists with the given email")
+var ErrUserNotFound = fmt.Sprintf("No user account exists with given email. Please sign in first")
+var UserCreationFailed = fmt.Sprintf("Unable to create user.Please try again later")
+
+type GenericResponse struct {
+	Status  bool        `json:"status"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
 }
 
 // swagger:response noContent
@@ -55,13 +66,13 @@ type Users struct {
 }
 type KeyUser struct{}
 
-//NewUsers creates a users handler with the given logger
+// NewUsers creates a user handler with the given logger
 func NewUsers(l *log.Logger, db *datastruct.Database) *Users {
 	return &Users{l, db}
 }
 
 func HashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 15)
 	return string(hash), err
 }
 
@@ -69,29 +80,39 @@ func (u *Users) AddUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	rc := r.Context().Value(KeyUser{}).(datastruct.User)
 
-	hash, err := HashPassword(rc.Password)
+	hp, err := HashPassword(rc.Password)
 	if err != nil {
 		fmt.Errorf("%s", ErrHash)
 	}
 
+	salt := utils.RandomString(15)
+
 	user := &datastruct.User{
 		Username:  rc.Username,
 		Email:     rc.Email,
-		Password:  hash,
-		TokenHash: rc.TokenHash,
+		Password:  hp,
+		TokenHash: salt,
 	}
 
-	id, err := u.db.AddUser(user)
+	_, err = u.db.AddUser(user)
 	if err != nil {
 		message := fmt.Sprintf("Error message: %v", err)
-		jM, _ := json.Marshal(message)
-		w.Write(jM)
-
+		//jM, _ := json.Marshal(message)
+		u.l.Print(message)
+		datastruct.ToJSON(&GenericResponse{Status: false, Message: message}, w)
+		return
 	}
-	fmt.Print(id)
+	//w.WriteHeader(http.StatusOK)
+
+	//json.NewEncoder(w).Encode(id)
+
+	u.l.Print("User created successfully")
+
+	w.WriteHeader(http.StatusCreated)
+	datastruct.ToJSON(&GenericResponse{Message: "user created successfully"}, w)
 }
 
-// swagger:route GET /users users listUsers
+// swagger:route GET /users listUsers
 // Return a list of users from the database
 // responses:
 //	200: usersResponse
