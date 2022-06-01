@@ -24,24 +24,31 @@ func main() {
 	}
 	defer dc.Close()
 	db := data.NewDatabase(dc)
-	uh := handlers.NewUsers(l, db)
+	users := handlers.NewUsers(l, db)
+	auth := handlers.NewAuth(l, db)
 
 	sm := mux.NewRouter()
 
+	//Auth
+	authRouter := sm.Methods(http.MethodPost).Subrouter()
+	authRouter.HandleFunc("/login", auth.Login)
+	authRouter.Use(auth.MiddlewareLoginValid)
+
+	//Users
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
-	getRouter.HandleFunc("/users", uh.GetUsers)
+	getRouter.HandleFunc("/users", users.GetUsers)
+	getRouter.HandleFunc("/", users.Dashboard)
+	getRouter.Use(auth.MiddlewareAuth)
 
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
-	postRouter.HandleFunc("/login", uh.Login)
-	postRouter.HandleFunc("/users", uh.AddUser)
-	postRouter.Use(uh.MiddlewareUserValid)
-
+	postRouter.HandleFunc("/users", users.AddUser)
+	postRouter.Use(users.MiddlewareUserValid)
 	putRouter := sm.Methods(http.MethodPut).Subrouter()
-	putRouter.HandleFunc("/users/{id:[0-9]+}", uh.UpdateUser)
-	putRouter.Use(uh.MiddlewareUserValid)
+	putRouter.HandleFunc("/users/{id:[0-9]+}", users.UpdateUser)
+	putRouter.Use(users.MiddlewareUserValid)
 
 	deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
-	deleteRouter.HandleFunc("/users/{id:[0-9]+}", uh.DeleteUser)
+	deleteRouter.HandleFunc("/users/{id:[0-9]+}", users.DeleteUser)
 
 	// handler for documentation
 	opts := middleware.RedocOpts{SpecURL: "/swagger.yaml"}
@@ -52,7 +59,7 @@ func main() {
 	getRouter.Handle("/docs", sh)
 	getRouter.Handle("/swagger.yaml", http.FileServer(http.Dir("./")))
 	s := &http.Server{
-		Addr:           ":8080",
+		Addr:           ":9090",
 		Handler:        ch(sm),
 		ReadTimeout:    10 * time.Second,
 		WriteTimeout:   10 * time.Second,

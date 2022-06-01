@@ -1,5 +1,5 @@
 CREATE TABLE `tradehelper`.`users` (
-`id`INT NOT NULL,
+`id`INT NOT NULL AUTO_INCREMENT,
 `email` VARCHAR(45) NOT NULL,
 `username` VARCHAR(45) NULL,
 `password` VARCHAR(255) NOT NULL,

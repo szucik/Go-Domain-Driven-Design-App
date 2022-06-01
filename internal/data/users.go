@@ -47,11 +47,6 @@ func (u *User) FromJSON(r io.Reader) error {
 	return e.Decode(u)
 }
 
-func (u *Users) ToJSON(w io.Writer) error {
-	e := json.NewEncoder(w)
-	return e.Encode(u)
-}
-
 func (db *Database) AddUser(u *User) (int64, error) {
 	stmt, err := db.db.Prepare("INSERT INTO users (username, email, password, tokenhash) VALUES (?, ?, ?, ?)")
 	if err != nil {
@@ -93,13 +88,13 @@ func (db *Database) GetUsers() (*Users, error) {
 	return &users, nil
 }
 
-func (db *Database) GetUser(id int) (*User, error) {
-	//selDB, err := db.db.Query("SELECT * FROM Users ORDER BY id DESC")
-	//if err != nil {
-	//	panic(err.Error())
-	//}
-	return nil, nil
-}
+//func (db *Database) GetUser(id int) (*User, error) {
+//	//selDB, err := db.db.Query("SELECT * FROM Users ORDER BY id DESC")
+//	//if err != nil {
+//	//	panic(err.Error())
+//	//}
+//	return nil, nil
+//}
 
 func UpdateUser(id int, u *User) error {
 	//_, pos, err := findUser(id)

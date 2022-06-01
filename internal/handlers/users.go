@@ -20,7 +20,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	data2 "github.com/szucik/go-simple-rest-api/internal/data"
+	datastruct "github.com/szucik/go-simple-rest-api/internal/data"
+	"github.com/szucik/go-simple-rest-api/internal/utils"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
@@ -33,7 +34,17 @@ var ErrHash = errors.New("Problem with hashing your password")
 type usersResponseWrapper struct {
 	//All users in the system
 	//in: body
-	Body []data2.User
+	Body []datastruct.User
+}
+
+var ErrUserAlreadyExists = fmt.Sprintf("User already exists with the given email")
+var ErrUserNotFound = fmt.Sprintf("No user account exists with given email. Please sign in first")
+var UserCreationFailed = fmt.Sprintf("Unable to create user.Please try again later")
+
+type GenericResponse struct {
+	Status  bool        `json:"status"`
+	Message string      `json:"message"`
+	Data    interface{} `json:"data"`
 }
 
 // swagger:response noContent
@@ -51,52 +62,57 @@ type usersIDParameterWrapper struct {
 //Users is a http.Handler
 type Users struct {
 	l  *log.Logger
-	db *data2.Database
+	db *datastruct.Database
 }
 type KeyUser struct{}
 
-//NewUsers creates a users handler with the given logger
-func NewUsers(l *log.Logger, db *data2.Database) *Users {
+// NewUsers creates a user handler with the given logger
+func NewUsers(l *log.Logger, db *datastruct.Database) *Users {
 	return &Users{l, db}
 }
 
-func (u *Users) Login(w http.ResponseWriter, r *http.Request) {
-	rc := r.Context().Value(KeyUser{}).(data2.User)
-	fmt.Println(rc)
-}
-
 func HashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 14)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 15)
 	return string(hash), err
 }
 
 func (u *Users) AddUser(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	rc := r.Context().Value(KeyUser{}).(data2.User)
+	rc := r.Context().Value(KeyUser{}).(datastruct.User)
 
-	hash, err := HashPassword(rc.Password)
+	hp, err := HashPassword(rc.Password)
 	if err != nil {
 		fmt.Errorf("%s", ErrHash)
 	}
 
-	user := &data2.User{
+	salt := utils.RandomString(15)
+
+	user := &datastruct.User{
 		Username:  rc.Username,
 		Email:     rc.Email,
-		Password:  hash,
-		TokenHash: rc.TokenHash,
+		Password:  hp,
+		TokenHash: salt,
 	}
 
-	id, err := u.db.AddUser(user)
+	_, err = u.db.AddUser(user)
 	if err != nil {
 		message := fmt.Sprintf("Error message: %v", err)
-		jM, _ := json.Marshal(message)
-		w.Write(jM)
-
+		//jM, _ := json.Marshal(message)
+		u.l.Print(message)
+		datastruct.ToJSON(&GenericResponse{Status: false, Message: message}, w)
+		return
 	}
-	fmt.Print(id)
+	//w.WriteHeader(http.StatusOK)
+
+	//json.NewEncoder(w).Encode(id)
+
+	u.l.Print("User created successfully")
+
+	w.WriteHeader(http.StatusCreated)
+	datastruct.ToJSON(&GenericResponse{Message: "user created successfully"}, w)
 }
 
-// swagger:route GET /users users listUsers
+// swagger:route GET /users listUsers
 // Return a list of users from the database
 // responses:
 //	200: usersResponse
@@ -126,44 +142,19 @@ func (u *Users) GetUsers(rw http.ResponseWriter, r *http.Request) {
 
 // DeleteUser deletes a user from DB
 
-func (u *Users) DeleteUser(rw http.ResponseWriter, r *http.Request) {
-	//vars := mux.Vars(r)
-	//id, err := strconv.Atoi(vars["id"])
-	//if err != nil {
-	//	http.Error(rw, "Unable to convert id", http.StatusBadRequest)
-	//	return
-	//}
-	//err = data.DeleteUser(id)
-	//if err == data.ErrUserNotFound {
-	//	http.Error(rw, "User not found", http.StatusNotFound)
-	//	return
-	//}
-}
+func (u *Users) DeleteUser(rw http.ResponseWriter, r *http.Request) {}
 
-func (u *Users) UpdateUser(rw http.ResponseWriter, r *http.Request) {
-	//vars := mux.Vars(r)
-	//id, err := strconv.Atoi(vars["id"])
-	//if err != nil {
-	//	http.Error(rw, "Unable to convert id", http.StatusBadRequest)
-	//	return
-	//}
-	//
-	//user := r.Context().Value(KeyUser{}).(data.User)
-	//
-	//err = data.UpdateUser(id, &user)
-	//if err == data.ErrUserNotFound {
-	//	http.Error(rw, "User not found", http.StatusNotFound)
-	//	return
-	//}
-	//if err != nil {
-	//	http.Error(rw, "User not found", http.StatusInternalServerError)
-	//	return
-	//}
+func (u *Users) UpdateUser(rw http.ResponseWriter, r *http.Request) {}
+
+func (u *Users) Dashboard(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "application/json")
+	//TODO Remember about Authorization cookies in client
+	rw.Write([]byte("Welcom in dashboard"))
 }
 
 func (u *Users) MiddlewareUserValid(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		usr := &data2.User{}
+		usr := &datastruct.User{}
 		err := usr.FromJSON(r.Body)
 		if err != nil {
 			u.l.Println("[ERROR] deserializing user", err)

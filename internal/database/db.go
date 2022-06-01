@@ -32,7 +32,7 @@ func config() *dbConfig {
 		"",
 		appendEnvMsg("required: database password", DbPassword))
 	dbName := flag.String("dbName", "", appendEnvMsg("required: database name", DbName))
-	fmt.Println(&driver, user, password, dbName)
+
 	flag.Parse()
 
 	dbParameters := fmt.Sprintf("%s:%s@/%s", *user, *password, *dbName)
