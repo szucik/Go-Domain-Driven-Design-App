@@ -1,11 +1,11 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/golang-jwt/jwt"
 	th_data "github.com/szucik/go-simple-rest-api/internal/data"
+	"github.com/szucik/go-simple-rest-api/internal/utils"
 	"golang.org/x/crypto/bcrypt"
 	"log"
 	"net/http"
@@ -14,27 +14,24 @@ import (
 
 //var ErrUserPass = errors.New("")
 
-//Users is a http.Handler
-type Auth struct {
+type Authenticate struct {
 	l  *log.Logger
 	db *th_data.Database
 }
 
-//NewUsers creates a users handler with the given logger
-func NewAuth(l *log.Logger, db *th_data.Database) *Auth {
-	return &Auth{l, db}
+func NewAuth(l *log.Logger, db *th_data.Database) *Authenticate {
+	return &Authenticate{l, db}
 }
 
-type keyAuth struct {
-}
+type keyAuth struct{}
 
 type JwtErrorMessage struct {
 	message string
 }
 
 var (
-	accessKey  = []byte("my_secret_key")
-	refreshKey = []byte("dupa")
+	accessKey  = []byte("accessKey")
+	refreshKey = []byte("refreshKey")
 	domain     = "tradehelper.io"
 )
 
@@ -73,8 +70,8 @@ func CheckPasswordHash(password, hash string) bool {
 	return err == nil
 }
 
-func (a *Auth) Login(rw http.ResponseWriter, r *http.Request) {
-	auth := r.Context().Value(keyAuth{}).(th_data.Auth)
+func (a *Authenticate) SignIn(rw http.ResponseWriter, r *http.Request) {
+	auth := r.Context().Value(keyAuth{}).(th_data.AuthCredentials)
 	usr, err := a.db.Login(auth.Email)
 	if err != nil {
 		rw.WriteHeader(http.StatusUnauthorized)
@@ -121,58 +118,34 @@ func (a *Auth) Login(rw http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (a *Auth) MiddlewareLoginValid(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		usr := &th_data.Auth{}
-		err := th_data.FromJSON(usr, r.Body)
-		if err != nil {
-			a.l.Println("[ERROR] deserializing user", err)
-			http.Error(rw, "Unable to unmarshal json", http.StatusBadRequest)
-			return
-		}
-		err = th_data.Validate(usr)
-		if err != nil {
-			a.l.Println("[ERROR] validate user", err)
-			http.Error(rw, "Unable validate user", http.StatusBadRequest)
-			return
-		}
+func (a *Authenticate) SignUp(rw http.ResponseWriter, r *http.Request) {
+	rw.Header().Set("Content-Type", "application/json")
+	rc := r.Context().Value(UserKey{}).(th_data.User)
 
-		ctx := context.WithValue(r.Context(), keyAuth{}, *usr)
-		r = r.WithContext(ctx)
-		next.ServeHTTP(rw, r)
-	})
-}
+	hp, err := utils.HashPassword(rc.Password)
+	if err != nil {
+		fmt.Errorf("%s", ErrHash)
+	}
 
-func (a *Auth) MiddlewareAuth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		c, err := r.Cookie("Authorization")
-		if err != nil {
-			if err == http.ErrNoCookie {
-				rw.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			rw.WriteHeader(http.StatusBadRequest)
-			return
-		}
+	salt := utils.RandomString(15)
 
-		tknStr := c.Value
-		claims := &customClaims{}
+	user := &th_data.User{
+		Username:  rc.Username,
+		Email:     rc.Email,
+		Password:  hp,
+		TokenHash: salt,
+	}
 
-		tkn, err := jwt.ParseWithClaims(tknStr, claims, func(token *jwt.Token) (interface{}, error) {
-			return accessKey, nil
-		})
-		if err != nil {
-			if err == jwt.ErrSignatureInvalid {
-				rw.WriteHeader(http.StatusUnauthorized)
-				return
-			}
-			rw.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		if !tkn.Valid {
-			rw.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		next.ServeHTTP(rw, r)
-	})
+	_, err = a.db.AddUser(user)
+	if err != nil {
+		message := fmt.Sprintf("Error message: %v", err)
+		//jM, _ := json.Marshal(message)
+		a.l.Print(message)
+		th_data.ToJSON(&GenericResponse{Status: false, Message: MsgUserAlreadyExists}, rw)
+		return
+	}
+	a.l.Print("UserKey created successfully")
+
+	//rw.WriteHeader(http.StatusCreated)
+	th_data.ToJSON(&GenericResponse{Status: true, Message: "user created successfully"}, rw)
 }

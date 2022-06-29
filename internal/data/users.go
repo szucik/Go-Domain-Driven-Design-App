@@ -1,10 +1,8 @@
 package data
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/go-playground/validator/v10"
-	"io"
 	"time"
 )
 
@@ -40,27 +38,6 @@ type Users []*User
 func (u *User) Validate() error {
 	v := validator.New()
 	return v.Struct(u)
-}
-
-func (u *User) FromJSON(r io.Reader) error {
-	e := json.NewDecoder(r)
-	return e.Decode(u)
-}
-
-func (db *Database) AddUser(u *User) (int64, error) {
-	stmt, err := db.db.Prepare("INSERT INTO users (username, email, password, tokenhash) VALUES (?, ?, ?, ?)")
-	if err != nil {
-		panic(err.Error())
-	}
-	result, err := stmt.Exec(u.Username, u.Email, u.Password, u.TokenHash)
-	if err != nil {
-		return 0, err
-	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
 }
 
 func (db *Database) GetUsers() (*Users, error) {
