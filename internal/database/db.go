@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"github.com/szucik/go-simple-rest-api/internal/configuration"
 )
 
 var db *sql.DB
@@ -21,7 +22,7 @@ const (
 )
 
 func appendEnvMsg(message, env string) string {
-	return message + fmt.Sprintf(" Can also be configured by env variable %s.", env)
+	return message + fmt.Sprintf("Can also be configured by env variable %s.", env)
 }
 
 func config() *dbConfig {
@@ -41,9 +42,14 @@ func config() *dbConfig {
 	}
 }
 
-func Connect() (*sql.DB, error) {
-	c := config()
-	db, err = sql.Open(c.driver, c.dbParams)
+func Connection() (*sql.DB, error) {
+	confEnv := config()
+
+	conf, err := configuration.New()
+	if err != nil {
+		return nil, err
+	}
+	db, err = sql.Open(conf.DBDriver, confEnv.dbParams)
 	if err != nil {
 		return nil, err
 	}

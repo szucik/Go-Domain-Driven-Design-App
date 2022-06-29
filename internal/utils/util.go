@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"golang.org/x/crypto/bcrypt"
 	"math/rand"
 	"strings"
 )
@@ -15,4 +16,9 @@ func RandomString(n int) string {
 		output.WriteString(string(randomChar))
 	}
 	return output.String()
+}
+
+func HashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 15)
+	return string(hash), err
 }
