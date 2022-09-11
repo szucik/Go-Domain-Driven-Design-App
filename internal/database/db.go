@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+
 	"github.com/szucik/go-simple-rest-api/internal/configuration"
 )
 

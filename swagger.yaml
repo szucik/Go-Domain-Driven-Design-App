@@ -31,7 +31,7 @@ definitions:
     - email
     - password
     type: object
-    x-go-package: github.com/szucik/go-simple-rest-api/data
+    x-go-package: github.com/szucik/go-simple-rest-api/dao
 info:
   description: Documentation for User API
   title: of User API
