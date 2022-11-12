@@ -1,4 +1,4 @@
-package dao
+package transaction
 
 import (
 	"time"
@@ -6,8 +6,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// Transaction represents a single transaction in the portfolio
-// swagger:model Transaction
 type Transaction struct {
 	// the id for this transaction
 	// required: true
@@ -31,18 +29,14 @@ type Transaction struct {
 	Created time.Time       `json:"created" sql:"created"`
 }
 
-func (d *Dao) AddTransaction(u *Transaction) (int64, error) {
-	stmt, err := d.db.Prepare("INSERT INTO transactions (user_id, symbol, price, quantity) VALUES (?, ?, ?, ?)")
-	if err != nil {
-		panic(err.Error())
-	}
-	result, err := stmt.Exec(u.UserId, u.Symbol, u.Price, u.Quantity)
-	if err != nil {
-		return 0, err
-	}
-	id, err := result.LastInsertId()
-	if err != nil {
-		return 0, err
-	}
-	return id, nil
+func (t Transaction) NewAggregate() (Aggregate, error) {
+	//TODO Add Validation error
+	//var aggregate Aggregate
+	//return aggregate, tradehelpererrors.ValidationError
+	//if u.Username == "" {
+	//	return Aggregate{}, nil
+	//}
+	return Aggregate{
+		tranasaction: t,
+	}, nil
 }

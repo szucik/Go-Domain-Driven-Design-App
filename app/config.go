@@ -1,4 +1,4 @@
-package configuration
+package app
 
 import (
 	"errors"
@@ -13,26 +13,38 @@ const (
 	DefaultConfigType = "yaml"
 	LocalConfigPath   = "local_configuration"
 )
-
 const (
-	DBDriver string = "DB.Driver"
-	Port     string = "Port"
+	DBDriver   = "DB.Driver"
+	DBUser     = "DB.DBUser"
+	DBPassword = "DB.DBPassword"
+	DBName     = "DB.DBName"
+	Port       = "Port"
 )
 
 var ErrInvalidConfig = errors.New("invalid config")
 
 var requiredConfig = []string{
 	DBDriver,
+	DBUser,
+	DBPassword,
+	DBName,
 	Port,
 }
 
-type Configuration struct {
-	ContactEmail string
-	DBDriver     string
-	Port         string
+type DatabaseOptions struct {
+	Driver,
+	User,
+	Password,
+	DbName string
 }
 
-func New() (*Configuration, error) {
+type Configuration struct {
+	ContactEmail,
+	Port string
+	Database DatabaseOptions
+}
+
+func GetConfiguration() (*Configuration, error) {
 	viper.SetConfigName(DefaultConfigName)
 	viper.SetConfigType(DefaultConfigType)
 	homePath, err := os.Getwd()
@@ -53,7 +65,12 @@ func New() (*Configuration, error) {
 	}
 
 	return &Configuration{
-		DBDriver: viper.GetString(DBDriver),
+		Database: DatabaseOptions{
+			Driver:   viper.GetString(DBDriver),
+			User:     viper.GetString(DBUser),
+			Password: viper.GetString(DBPassword),
+			DbName:   viper.GetString(DBName),
+		},
 	}, nil
 }
 
