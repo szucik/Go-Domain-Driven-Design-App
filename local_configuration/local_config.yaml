@@ -1,5 +1,9 @@
 DB:
   Driver: mysql
+  DBUser: DBUser
+  DBPassword: DBPassword
+  DBName:  DBName
+
 
 Port: ':9090'
 

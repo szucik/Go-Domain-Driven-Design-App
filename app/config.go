@@ -11,7 +11,7 @@ import (
 const (
 	DefaultConfigName = "local_config"
 	DefaultConfigType = "yaml"
-	LocalConfigPath   = "local"
+	LocalConfigPath   = "local_configuration"
 )
 const (
 	DBDriver   = "DB.Driver"
