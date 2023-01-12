@@ -16,9 +16,3 @@ type Portfolio struct {
 	ProfitLossDay   decimal.Decimal `json:"profit_loss_day"`
 	Created         time.Time       `json:"created" sql:"created"`
 }
-
-func (p Portfolio) NewAggregate() (Aggregate, error) {
-	return Aggregate{
-		portfolio: p,
-	}, nil
-}

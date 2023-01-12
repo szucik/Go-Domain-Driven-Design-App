@@ -9,12 +9,9 @@ type Database interface {
 }
 
 type Transactions struct {
-	Logger       *log.Logger
-	Database     Database
-	NewAggregate func(Transaction) (Aggregate, error)
+	Logger   *log.Logger
+	Database Database
 }
-
-type TransactionKey struct{}
 
 func (t *Transactions) AddTransaction(rw http.ResponseWriter, r *http.Request) {
 	rw.Header().Set("Content-Type", "application/json")

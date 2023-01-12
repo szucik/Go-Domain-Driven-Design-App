@@ -28,9 +28,3 @@ type Transaction struct {
 	Price   decimal.Decimal `json:"price" validate:"required"`
 	Created time.Time       `json:"created" sql:"created"`
 }
-
-func (t Transaction) NewAggregate() (Aggregate, error) {
-	return Aggregate{
-		tranasaction: t,
-	}, nil
-}
