@@ -1,9 +1,18 @@
 package user
 
-import "time"
+import (
+	"errors"
+	"github.com/google/uuid"
+	"github.com/szucik/go-simple-rest-api/transaction"
+	"time"
+)
+
+var (
+	invalidUserErr = errors.New("invalid user params")
+)
 
 type User struct {
-	ID        int       `json:"id"`
+	ID        uuid.UUID `json:"id"`
 	Username  string    `json:"username" validate:"required"`
 	Email     string    `json:"email" validate:"required" sql:"email"`
 	Password  string    `json:"password" validate:"required" sql:"password"`
@@ -14,12 +23,12 @@ type User struct {
 
 func (u User) NewAggregate() (Aggregate, error) {
 	//TODO Add Validation error
-	//var aggregate Aggregate
-	//return aggregate, tradehelpererrors.ValidationError
-	//if u.Username == "" {
-	//	return Aggregate{}, nil
-	//}
+
+	if u.Username == "" || u.Email == "" || u.Password == "" {
+		return Aggregate{}, invalidUserErr
+	}
 	return Aggregate{
-		user: u,
+		user:        &u,
+		transaction: &transaction.Transaction{},
 	}, nil
 }
