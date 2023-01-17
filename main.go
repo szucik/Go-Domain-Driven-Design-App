@@ -3,15 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/szucik/go-simple-rest-api/database/fake"
-	"github.com/szucik/go-simple-rest-api/web/handlers"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
-	"github.com/szucik/go-simple-rest-api/user"
+	"github.com/szucik/trade-helper/database/fake"
+	"github.com/szucik/trade-helper/web/handlers"
+
+	"github.com/szucik/trade-helper/user"
 
 	_ "github.com/go-sql-driver/mysql"
 
@@ -22,16 +23,16 @@ import (
 func main() {
 	logger := log.New(os.Stdout, "logger", log.LstdFlags)
 
-	//config, err := app.GetConfiguration()
-	//if err != nil {
+	// config, err := app.GetConfiguration()
+	// if err != nil {
 	//	panic("Loading config failed: " + err.Error())
-	//}
+	// }
 
 	database := fake.NewDatabase()
-	//portfolios := portfolio.Portfolios{
+	// portfolios := portfolio.Portfolios{
 	//	Database:     database,
 	//	NewAggregate: portfolio.Portfolio.NewAggregate,
-	//}
+	// }
 
 	users := user.Users{
 		Logger:       logger,
@@ -45,26 +46,26 @@ func main() {
 	// SignUp
 	signUpRouter := sm.Methods(http.MethodPost).Subrouter()
 	signUpRouter.HandleFunc("/signup", handlers.SignUp(users))
-	//signUpRouter.Use(users.MiddlewareUserValid)
+	// signUpRouter.Use(users.MiddlewareUserValid)
 
 	// SignIn
-	//signInRouter := sm.Methods(http.MethodPost).Subrouter()
-	//signInRouter.HandleFunc("/signin", users.SignIn)
-	//signInRouter.Use(users.MiddlewareLoginValid)
+	// signInRouter := sm.Methods(http.MethodPost).Subrouter()
+	// signInRouter.HandleFunc("/signin", users.SignIn)
+	// signInRouter.Use(users.MiddlewareLoginValid)
 
 	// Users
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/users", handlers.GetUsers(users))
-	//getRouter.HandleFunc("/users/{id:[0-9]+}", users.GetUsers)
-	//getRouter.HandleFunc("/", users.Dashboard)
-	//getRouter.Use(users.MiddlewareIsAuth)
+	// getRouter.HandleFunc("/users/{id:[0-9]+}", users.GetUsers)
+	// getRouter.HandleFunc("/", users.Dashboard)
+	// getRouter.Use(users.MiddlewareIsAuth)
 
-	//putRouter := sm.Methods(http.MethodPut).Subrouter()
-	//putRouter.HandleFunc("/users/{id:[0-9]+}", users.UpdateUser)
-	//putRouter.Use(users.MiddlewareUserValid)
+	// putRouter := sm.Methods(http.MethodPut).Subrouter()
+	// putRouter.HandleFunc("/users/{id:[0-9]+}", users.UpdateUser)
+	// putRouter.Use(users.MiddlewareUserValid)
 
-	//deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
-	//deleteRouter.HandleFunc("/users/{id:[0-9]+}", users.DeleteUser)
+	// deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
+	// deleteRouter.HandleFunc("/users/{id:[0-9]+}", users.DeleteUser)
 
 	// CORS
 	ch := gohandlers.CORS(gohandlers.AllowedOrigins([]string{"localhost:3000"}))

@@ -26,5 +26,5 @@ type Transaction struct {
 	// the price of the purchased cryptocurrency
 	// required: true
 	Price   decimal.Decimal `json:"price" validate:"required"`
-	Created time.Time       `json:"created" sql:"created"`
+	Created time.Time       `json:"created"`
 }

@@ -1,10 +1,10 @@
 package app
 
 import (
-	_ "github.com/szucik/go-simple-rest-api/portfolio"
+	_ "github.com/szucik/trade-helper/portfolio"
 )
 
-//func (u *Users) MiddlewareLoginValid(next http.Handler) http.Handler {
+// func (u *Users) MiddlewareLoginValid(next http.Handler) http.Handler {
 //	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 //		credentials := &dao2.AuthCredentials{}
 //		err := u.db.FromJSON(credentials, r.Body)
@@ -25,9 +25,9 @@ import (
 //		r = r.WithContext(ctx)
 //		next.ServeHTTP(rw, r)
 //	})
-//}
+// }
 //
-//func (u *Users) MiddlewareIsAuth(next http.Handler) http.Handler {
+// func (u *Users) MiddlewareIsAuth(next http.Handler) http.Handler {
 //	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 //		c, err := r.Cookie("Authorization")
 //		if err != nil {
@@ -62,11 +62,11 @@ import (
 //		}
 //		next.ServeHTTP(rw, r)
 //	})
-//}
+// }
 //
-//func (u *Users) MiddlewareUserValid(next http.Handler) http.Handler {
+// func (u *Users) MiddlewareUserValid(next http.Handler) http.Handler {
 //	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-//		usr := &dao2.User{}
+//		usr := &dao2.user{}
 //		err := u.db.FromJSON(usr, r.Body)
 //		if err != nil {
 //			u.l.Println("[ERROR] deserializing user", err)
@@ -85,9 +85,9 @@ import (
 //		r = r.WithContext(ctx)
 //		next.ServeHTTP(rw, r)
 //	})
-//}
+// }
 
-//func (p *portfolio.Portfolios) MiddlewarePortfolioValid(next http.Handler) http.Handler {
+// func (p *portfolio.Portfolios) MiddlewarePortfolioValid(next http.Handler) http.Handler {
 //	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 //		portfolio := &dao2.Portfolio{}
 //		err := p.db.FromJSON(portfolio, r.Body)
@@ -108,9 +108,9 @@ import (
 //		r = r.WithContext(ctx)
 //		next.ServeHTTP(rw, r)
 //	})
-//}
+// }
 
-//func (t *Transactions) MiddlewareTransactionValid(next http.Handler) http.Handler {
+// func (t *Transactions) MiddlewareTransactionValid(next http.Handler) http.Handler {
 //	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 //		transaction := &dao2.Transaction{}
 //		err := t.db.FromJSON(transaction, r.Body)
@@ -132,4 +132,4 @@ import (
 //		r = r.WithContext(ctx)
 //		next.ServeHTTP(rw, r)
 //	})
-//}
+// }

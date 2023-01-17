@@ -2,18 +2,20 @@ package user
 
 import (
 	"github.com/google/uuid"
-	"github.com/szucik/go-simple-rest-api/portfolio"
-	"github.com/szucik/go-simple-rest-api/transaction"
+
+	"github.com/szucik/trade-helper/portfolio"
+	"github.com/szucik/trade-helper/transaction"
 )
 
 type Aggregate struct {
-	user        *User
+	user        User
 	transaction *transaction.Transaction
 	portfolio   *portfolio.Portfolio
 }
 
-func (a *Aggregate) User() *User {
-	return a.user
+func (a *Aggregate) User() User {
+	user := a.user
+	return user
 }
 
 func (a *Aggregate) Transaction() *transaction.Transaction {
@@ -26,4 +28,8 @@ func (a *Aggregate) Portfolio() *portfolio.Portfolio {
 
 func (a *Aggregate) GetID() uuid.UUID {
 	return a.User().ID
+}
+
+func (a *Aggregate) SetId(id uuid.UUID) {
+	a.user.ID = id
 }
