@@ -4,13 +4,13 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 
+	"github.com/szucik/trade-helper/portfolio"
 	"github.com/szucik/trade-helper/web"
 )
 
 type User struct {
-	ID        uuid.UUID `json:"id"`
 	Username  string    `json:"username" validate:"required"`
 	Email     string    `json:"email" validate:"required"`
 	Password  string    `json:"password" validate:"required"`
@@ -19,39 +19,48 @@ type User struct {
 	Updated   time.Time `json:"updated"`
 }
 
+type UserResponse struct {
+	Username  string                `json:"username" validate:"required"`
+	Email     string                `json:"email" validate:"required"`
+	Portfolio []portfolio.Portfolio `json:"portfolios" validate:"required"`
+	Created   time.Time             `json:"created"`
+}
+
 func (u User) NewAggregate() (Aggregate, error) {
 	switch {
 	case !isLengthValid(u.Username, 2):
-		return Aggregate{}, web.ErrorResponse{
-			TraceId: "",
-			Code:    400,
-			Message: "user name is to short",
-			Type:    "UserParamsValidation",
-		}
+		return Aggregate{}, web.BadRequestError(
+			"User name is to short",
+			"UserParamsValidation",
+		)
 
 	case !isEmailValid(u.Email):
-		return Aggregate{}, web.ErrorResponse{
-			TraceId: "",
-			Code:    400,
-			Message: "user email is to short",
-			Type:    "UserParamsValidation",
-		}
+		return Aggregate{}, web.BadRequestError(
+			"Invalid user email",
+			"UserParamsValidation",
+		)
 
 	case !isLengthValid(u.Password, 8):
-		return Aggregate{}, web.ErrorResponse{
-			TraceId: "",
-			Code:    400,
-			Message: "user password is to short",
-			Type:    "UserParamsValidation",
-		}
+		return Aggregate{},
+			web.BadRequestError(
+				"Password is to short, it should be longer than 8 characters",
+				"UserParamsValidation",
+			)
 	}
+
+	hash, err := hashPassword(u.Password)
+	if err != nil {
+		return Aggregate{}, err
+	}
+	u.Password = hash
+
 	return Aggregate{
 		user: u,
-		// transaction: &transaction.Transaction{},
 	}, nil
 }
 
 func isEmailValid(email string) bool {
+	// TODO
 	var emailRegex = regexp.MustCompile("(?:[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*|\"" +
 		"(?:[\\x01-\\x08\\x0b\\x0c\\x0e-\\x1f\\x21\\x23-\\x5b\\x5d-\\x7f]|\\\\[\\x01-\\x09\\x0b\\x0c\\x0e-\\x7f])*\")" +
 		"@(?:(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?|\\[(?:(?:(2(5[0-5]|[0-4][0-9])|" +
@@ -65,4 +74,9 @@ func isLengthValid(value string, length int) bool {
 		return false
 	}
 	return true
+}
+
+func hashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 15)
+	return string(hash), err
 }

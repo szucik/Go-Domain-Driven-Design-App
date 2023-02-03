@@ -1,8 +1,6 @@
 package user
 
 import (
-	"github.com/google/uuid"
-
 	"github.com/szucik/trade-helper/portfolio"
 	"github.com/szucik/trade-helper/transaction"
 )
@@ -24,12 +22,4 @@ func (a *Aggregate) Transaction() *transaction.Transaction {
 
 func (a *Aggregate) Portfolio() *portfolio.Portfolio {
 	return a.portfolio
-}
-
-func (a *Aggregate) GetID() uuid.UUID {
-	return a.User().ID
-}
-
-func (a *Aggregate) SetId(id uuid.UUID) {
-	a.user.ID = id
 }

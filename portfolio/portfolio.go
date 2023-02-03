@@ -9,7 +9,6 @@ import (
 type Portfolio struct {
 	ID              int             `json:"id"`
 	Name            string          `json:"name,omitempty" validate:"required"`
-	UserId          int             `json:"user_id" validate:"required"`
 	TotalBalance    decimal.Decimal `json:"total_balance"`
 	TotalCost       decimal.Decimal `json:"total_cost"`
 	TotalProfitLoss decimal.Decimal `json:"total_profit_loss"`

@@ -2,19 +2,12 @@ package fake
 
 import (
 	"context"
-	"errors"
 	"sync"
 
 	"github.com/google/uuid"
 
 	"github.com/szucik/trade-helper/user"
 	"github.com/szucik/trade-helper/web"
-)
-
-var (
-	errUserNotFound    = errors.New("the user was not found in the repository")
-	errFailedToAddUser = errors.New("failed to add the user to the repository")
-	errUpdateUser      = errors.New("failed to update the user in the repository")
 )
 
 type MemoryRepository struct {
@@ -24,23 +17,21 @@ type MemoryRepository struct {
 
 func NewDatabase() MemoryRepository {
 	return MemoryRepository{
-		user: make(map[string]user.Aggregate),
+		user: map[string]user.Aggregate{},
 	}
 }
 
-func (mr MemoryRepository) SignUp(aggregate user.Aggregate) (user.Id, error) {
+func (mr MemoryRepository) SignUp(aggregate user.Aggregate) (string, error) {
 	mr.Lock()
 	defer mr.Unlock()
 
 	if mr.user == nil {
 		mr.user = make(map[string]user.Aggregate)
 	}
-	id := uuid.New()
-	aggregate.SetId(id)
 
 	if _, ok := mr.user[aggregate.User().Username]; ok {
-		return user.Id{}, web.ErrorResponse{
-			TraceId: id.String(),
+		return "", web.ErrorResponse{
+			TraceId: uuid.New().String(),
 			Code:    400,
 			Message: "user already exists",
 			Type:    "DuplicateUser",
@@ -48,7 +39,7 @@ func (mr MemoryRepository) SignUp(aggregate user.Aggregate) (user.Id, error) {
 
 	}
 	mr.user[aggregate.User().Username] = aggregate
-	return user.Id(aggregate.GetID()), nil
+	return aggregate.User().Username, nil
 }
 
 func (mr MemoryRepository) GetUsers() ([]user.Aggregate, error) {
@@ -65,9 +56,15 @@ func (mr MemoryRepository) GetUsers() ([]user.Aggregate, error) {
 	return users, nil
 }
 
-func (mr MemoryRepository) GetUser(ctx context.Context) (user.Aggregate, error) {
-	// TODO implement me
-	panic("implement me")
+func (mr MemoryRepository) GetUser(username string) (user.Aggregate, error) {
+	mr.Lock()
+	defer mr.Unlock()
+
+	if user, exist := mr.user[username]; exist {
+		return user, nil
+	}
+
+	return user.Aggregate{}, web.BadRequestError("User don't exist", "NonExistentUser")
 }
 
 func (mr MemoryRepository) UpdateUser(ctx context.Context) (user.Aggregate, error) {

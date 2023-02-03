@@ -3,6 +3,8 @@ package web
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/google/uuid"
 )
 
 type ErrorResponse struct {
@@ -21,4 +23,13 @@ func (e ErrorResponse) JSONError(w http.ResponseWriter) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.WriteHeader(e.Code)
 	json.NewEncoder(w).Encode(e)
+}
+
+func BadRequestError(message, errorType string) ErrorResponse {
+	return ErrorResponse{
+		TraceId: uuid.New().String(),
+		Code:    400,
+		Message: message,
+		Type:    errorType,
+	}
 }
