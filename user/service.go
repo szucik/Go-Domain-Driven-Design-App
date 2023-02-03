@@ -1,34 +1,24 @@
 package user
 
 import (
-	"errors"
+	"fmt"
 	"log"
-
-	"github.com/google/uuid"
+	"time"
 )
-
-var (
-	ErrHash              = errors.New("Problem with hashing your password")
-	MsgUserAlreadyExists = "UserKey already exists with the given email"
-)
-
-type Id uuid.UUID
 
 type UsersService interface {
-	SignUp(user User) (Id, error)
+	SignUp(user User) (string, error)
 	SignIn() error
-	GetUser(userId string) error
-
-	// TODO GetUsers should return map of aggregates???
-	GetUsers() ([]Aggregate, error)
+	GetUser(userName string) (UserResponse, error)
+	GetUsers() (UsersOut, error)
 	Update() error
 }
 type Repository interface {
-	// GetUsers UpdateUser(ctx context.Context) (Aggregate, error)
-	// Dashboard(ctx context.Context) (Aggregate, error)
+	// GetUser Dashboard(ctx context.Context) (Aggregate, error)
 	// SignIn(ctx context.Context) (Aggregate, error)
+	GetUser(userName string) (Aggregate, error)
 	GetUsers() ([]Aggregate, error)
-	SignUp(aggregate Aggregate) (Id, error)
+	SignUp(aggregate Aggregate) (string, error)
 }
 
 type Users struct {
@@ -37,46 +27,66 @@ type Users struct {
 	NewAggregate func(User) (Aggregate, error)
 }
 
-// func HashPassword(password string) (string, error) {
-// 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 15)
-// 	return string(hash), err
-// }
-
-func (u Users) SignUp(user User) (Id, error) {
-
-	// hash, err := HashPassword(user.Password)
-	// if err != nil {
-	// 	fmt.Errorf("%s", ErrHash)
-	// }
+func (u Users) SignUp(user User) (string, error) {
+	user.Created = time.Now()
 
 	aggregate, err := u.NewAggregate(user)
 	if err != nil {
-		return Id{}, err
+		return "", err
 	}
 
 	id, err := u.Database.SignUp(aggregate)
 	if err != nil {
-		return Id{}, err
+		return "", fmt.Errorf("database.SignUp failed: %w", err)
 	}
 
 	return id, nil
 }
 
-func (u Users) GetUsers() ([]Aggregate, error) {
-	users, err := u.Database.GetUsers()
+type UsersOut struct {
+	Users []UserResponse
+}
+
+func (u Users) GetUser(userName string) (UserResponse, error) {
+	aggregate, err := u.Database.GetUser(userName)
 	if err != nil {
-		return users, err
+		return UserResponse{}, fmt.Errorf("database.GetUser failed: %w", err)
 	}
 
-	return users, nil
+	return UserResponse{
+		Username:  aggregate.User().Username,
+		Email:     aggregate.User().Email,
+		Portfolio: nil,
+		Created:   aggregate.User().Created,
+	}, nil
+}
+
+func (u Users) GetUsers() (UsersOut, error) {
+	var response UsersOut
+	users, err := u.Database.GetUsers()
+	if err != nil {
+		return UsersOut{}, fmt.Errorf("database.GetUsers failed: %w", err)
+	}
+
+	for _, user := range users {
+		response.Users = append(response.Users, transformToUserResponse(user))
+	}
+
+	return response, nil
+}
+
+func transformToUserResponse(aggregate Aggregate) UserResponse {
+	user := aggregate.User()
+
+	return UserResponse{
+		Username:  user.Username,
+		Email:     user.Email,
+		Created:   user.Created,
+		Portfolio: nil,
+	}
 }
 
 func (u Users) SignIn() error {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (u Users) GetUser(userId string) error {
 	// TODO implement me
 	panic("implement me")
 }

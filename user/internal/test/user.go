@@ -2,19 +2,19 @@ package test
 
 import "github.com/szucik/trade-helper/user"
 
-type FakeUser user.User
+type User user.User
 
-func (u FakeUser) WithEmail(email string) FakeUser {
+func (u User) WithEmail(email string) User {
 	u.Email = email
 	return u
 }
 
-func (u FakeUser) WithName(userName string) FakeUser {
+func (u User) WithName(userName string) User {
 	u.Username = userName
 	return u
 }
 
-func (u FakeUser) WithPassword(pass string) FakeUser {
+func (u User) WithPassword(pass string) User {
 	u.Password = pass
 	return u
 }

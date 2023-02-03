@@ -36,7 +36,7 @@ func main() {
 
 	users := user.Users{
 		Logger:       logger,
-		Database:     database,
+		Database:     &database,
 		NewAggregate: user.User.NewAggregate,
 	}
 
@@ -56,7 +56,7 @@ func main() {
 	// Users
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/users", handlers.GetUsers(users))
-	// getRouter.HandleFunc("/users/{id:[0-9]+}", users.GetUsers)
+	getRouter.HandleFunc("/users/{username:[a-z, A-Z, 0-9]+}", handlers.GetUser(users))
 	// getRouter.HandleFunc("/", users.Dashboard)
 	// getRouter.Use(users.MiddlewareIsAuth)
 

@@ -5,42 +5,71 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/szucik/trade-helper/database/fake"
 	"github.com/szucik/trade-helper/user"
 )
 
-var userService = user.Users{
-	Logger:       log.New(os.Stdout, "logger", log.LstdFlags),
-	Database:     fake.NewDatabase(),
-	NewAggregate: user.User.NewAggregate,
-}
+var (
+	database    = fake.NewDatabase()
+	userService = user.Users{
+		Logger:       log.New(os.Stdout, "logger", log.LstdFlags),
+		Database:     &database,
+		NewAggregate: user.User.NewAggregate,
+	}
+
+	instanceAggregate = func() user.Aggregate {
+		aggregate, err := user.User(testUser).NewAggregate()
+		if err != nil {
+			panic(err)
+		}
+
+		return aggregate
+	}()
+)
 
 func TestUserService_SignUp(t *testing.T) {
-	// t.Run("should create new user", func(t *testing.T) {
-	// 	_, err := userService.SignUp(user.User(fakeUser))
-	// 	assert.Error(t, err)
-	// })
+	t.Run("should return userName when user creation is complete", func(t *testing.T) {
+		// when
+		username, err := userService.SignUp(user.User(testUser))
+		assert.NoError(t, err)
+
+		// then
+		assert.Equal(t, instanceAggregate.User().Username, username)
+	})
 }
 
-func TestUsers_GetUsers(t *testing.T) {
-	// t.Run("should return an error when ", func(t *testing.T) {
-	// 	testCases := map[string]struct {
-	// 		user test.FakeUser
-	// 	}{}
-	//
-	// 	for name, testCase := range testCases {
-	// 		t.Run(name, func(t *testing.T) {
-	//
-	// 		})
-	// 	}
-	// })
-
+func TestUserService_GetUsers(t *testing.T) {
 	t.Run("should return list of users", func(t *testing.T) {
-		// aggregates, _ := userService.GetUsers()
-		// // when
-		// aggregate, err := user.user(fakeUser).NewAggregate()
-		// // then
-		// assert.Equal(t, user.user(fakeUser), aggregate.user())
-	})
+		databaseWithThreeUserInstances(t)
 
+		// when
+		out, err := userService.GetUsers()
+		require.NoError(t, err)
+
+		// then
+		assert.Len(t, out.Users, 3, "Three user instances")
+	})
+}
+
+func databaseWithThreeUserInstances(t *testing.T) {
+	database = fake.NewDatabase()
+
+	users := []user.User{
+		user.User(testUser.WithEmail("email1@test.test").
+			WithName("name1")),
+		user.User(testUser.WithEmail("email2@test.test").
+			WithName("name2")),
+		user.User(testUser.WithEmail("email3@test.test").
+			WithName("name3")),
+	}
+
+	for _, user := range users {
+		aggregate, err := user.NewAggregate()
+		require.NoError(t, err)
+		_, err = database.SignUp(aggregate)
+		require.NoError(t, err)
+	}
 }

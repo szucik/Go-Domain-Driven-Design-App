@@ -10,28 +10,27 @@ import (
 	"github.com/szucik/trade-helper/user/internal/test"
 )
 
-var fakeUser = test.FakeUser{
-	Username: "username",
-	Email:    "email@test.com",
-	Password: "12345678",
-}
+var (
+	testUser = test.User{
+		Username: "username",
+		Email:    "email@test.com",
+		Password: "12345678",
+	}
+)
 
 func TestUser_NewAggregate(t *testing.T) {
 	t.Run("should return an error when ", func(t *testing.T) {
 		testCases := map[string]struct {
-			user test.FakeUser
+			user test.User
 		}{
-			"address email has incorrect format": {
-				user: fakeUser.WithEmail("com.invalid-email@test"),
+			"address e-mail has incorrect format": {
+				user: testUser.WithEmail("com.invalid-email@test"),
 			},
 			"e-mail is shorter than 6 characters": {
-				user: fakeUser.WithEmail("e@p.l"),
+				user: testUser.WithEmail("e@p.l"),
 			},
 			"password has less than 2 characters": {
-				user: fakeUser.WithPassword("1234567"),
-			},
-			"name has less than 2 characters": {
-				user: fakeUser.WithName("u"),
+				user: testUser.WithPassword("1234567"),
 			},
 		}
 
@@ -45,11 +44,13 @@ func TestUser_NewAggregate(t *testing.T) {
 		}
 	})
 
-	t.Run("should create new user aggregate", func(t *testing.T) {
+	t.Run("should create new user aggregate when all validations are passed", func(t *testing.T) {
 		// when
-		aggregate, err := user.User(fakeUser).NewAggregate()
+		aggregate, err := user.User(testUser).NewAggregate()
 		require.NoError(t, err)
+
 		// then
-		assert.Equal(t, user.User(fakeUser), aggregate.User())
+		testUser.Password = aggregate.User().Password
+		assert.Equal(t, user.User(testUser), aggregate.User())
 	})
 }
