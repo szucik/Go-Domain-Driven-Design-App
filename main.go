@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -14,25 +13,13 @@ import (
 
 	"github.com/szucik/trade-helper/user"
 
-	_ "github.com/go-sql-driver/mysql"
-
 	gohandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 )
 
 func main() {
 	logger := log.New(os.Stdout, "logger", log.LstdFlags)
-
-	// config, err := app.GetConfiguration()
-	// if err != nil {
-	//	panic("Loading config failed: " + err.Error())
-	// }
-
 	database := fake.NewDatabase()
-	// portfolios := portfolio.Portfolios{
-	//	Database:     database,
-	//	NewAggregate: portfolio.Portfolio.NewAggregate,
-	// }
 
 	users := user.Users{
 		Logger:       logger,
@@ -42,23 +29,15 @@ func main() {
 
 	sm := mux.NewRouter()
 
-	fmt.Println(users)
 	// SignUp
 	signUpRouter := sm.Methods(http.MethodPost).Subrouter()
 	signUpRouter.HandleFunc("/signup", handlers.SignUp(users))
 	// signUpRouter.Use(users.MiddlewareUserValid)
 
-	// SignIn
-	// signInRouter := sm.Methods(http.MethodPost).Subrouter()
-	// signInRouter.HandleFunc("/signin", users.SignIn)
-	// signInRouter.Use(users.MiddlewareLoginValid)
-
 	// Users
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/users", handlers.GetUsers(users))
 	getRouter.HandleFunc("/users/{username:[a-z, A-Z, 0-9]+}", handlers.GetUser(users))
-	// getRouter.HandleFunc("/", users.Dashboard)
-	// getRouter.Use(users.MiddlewareIsAuth)
 
 	// putRouter := sm.Methods(http.MethodPut).Subrouter()
 	// putRouter.HandleFunc("/users/{id:[0-9]+}", users.UpdateUser)

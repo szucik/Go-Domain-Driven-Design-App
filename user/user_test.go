@@ -48,9 +48,7 @@ func TestUser_NewAggregate(t *testing.T) {
 		// when
 		aggregate, err := user.User(testUser).NewAggregate()
 		require.NoError(t, err)
-
 		// then
-		testUser.Password = aggregate.User().Password
 		assert.Equal(t, user.User(testUser), aggregate.User())
 	})
 }
