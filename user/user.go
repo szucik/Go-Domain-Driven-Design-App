@@ -4,8 +4,6 @@ import (
 	"regexp"
 	"time"
 
-	"golang.org/x/crypto/bcrypt"
-
 	"github.com/szucik/trade-helper/portfolio"
 	"github.com/szucik/trade-helper/web"
 )
@@ -48,12 +46,6 @@ func (u User) NewAggregate() (Aggregate, error) {
 			)
 	}
 
-	hash, err := hashPassword(u.Password)
-	if err != nil {
-		return Aggregate{}, err
-	}
-	u.Password = hash
-
 	return Aggregate{
 		user: u,
 	}, nil
@@ -74,9 +66,4 @@ func isLengthValid(value string, length int) bool {
 		return false
 	}
 	return true
-}
-
-func hashPassword(password string) (string, error) {
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 15)
-	return string(hash), err
 }

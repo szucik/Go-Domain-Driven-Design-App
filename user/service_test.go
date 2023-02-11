@@ -35,7 +35,6 @@ func TestUserService_SignUp(t *testing.T) {
 		// when
 		username, err := userService.SignUp(user.User(testUser))
 		assert.NoError(t, err)
-
 		// then
 		assert.Equal(t, instanceAggregate.User().Username, username)
 	})
@@ -48,7 +47,6 @@ func TestUserService_GetUsers(t *testing.T) {
 		// when
 		out, err := userService.GetUsers()
 		require.NoError(t, err)
-
 		// then
 		assert.Len(t, out.Users, 3, "Three user instances")
 	})

@@ -2,6 +2,7 @@ package fake
 
 import (
 	"context"
+	"net/http"
 	"sync"
 
 	"github.com/google/uuid"
@@ -32,7 +33,7 @@ func (mr MemoryRepository) SignUp(aggregate user.Aggregate) (string, error) {
 	if _, ok := mr.user[aggregate.User().Username]; ok {
 		return "", web.ErrorResponse{
 			TraceId: uuid.New().String(),
-			Code:    400,
+			Code:    http.StatusBadRequest,
 			Message: "user already exists",
 			Type:    "DuplicateUser",
 		}
@@ -63,8 +64,12 @@ func (mr MemoryRepository) GetUser(username string) (user.Aggregate, error) {
 	if user, exist := mr.user[username]; exist {
 		return user, nil
 	}
-
-	return user.Aggregate{}, web.BadRequestError("User don't exist", "NonExistentUser")
+	return user.Aggregate{}, web.ErrorResponse{
+		TraceId: uuid.New().String(),
+		Code:    http.StatusNotFound,
+		Message: "user not found",
+		Type:    "UserNotFound",
+	}
 }
 
 func (mr MemoryRepository) UpdateUser(ctx context.Context) (user.Aggregate, error) {
@@ -73,11 +78,6 @@ func (mr MemoryRepository) UpdateUser(ctx context.Context) (user.Aggregate, erro
 }
 
 func (mr MemoryRepository) Dashboard(ctx context.Context) (user.Aggregate, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (mr MemoryRepository) SignIn(ctx context.Context) (user.Aggregate, error) {
 	// TODO implement me
 	panic("implement me")
 }
