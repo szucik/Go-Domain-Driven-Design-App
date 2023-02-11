@@ -10,11 +10,6 @@ import (
 	"github.com/szucik/trade-helper/user"
 )
 
-type ResponseMessage struct {
-	code    int
-	message string
-}
-
 func SignUp(service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var user user.User
@@ -32,9 +27,7 @@ func SignUp(service user.UsersService) func(http.ResponseWriter, *http.Request) 
 			return
 		}
 
-		rw.WriteHeader(http.StatusOK)
-		rw.Write([]byte(username))
-		return
+		writeSuccesMessage(rw, []byte(username))
 	}
 }
 
@@ -42,7 +35,7 @@ func GetUsers(service user.UsersService) func(http.ResponseWriter, *http.Request
 	return func(rw http.ResponseWriter, r *http.Request) {
 		users, err := service.GetUsers()
 		if err != nil {
-			rw.WriteHeader(400)
+			http.Error(rw, err.Error(), 400)
 			return
 		}
 
@@ -52,19 +45,16 @@ func GetUsers(service user.UsersService) func(http.ResponseWriter, *http.Request
 			return
 		}
 
-		rw.WriteHeader(http.StatusOK)
-		rw.Write(result)
-		return
+		writeSuccesMessage(rw, result)
 	}
 }
 
 func GetUser(service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
-
 		vars := mux.Vars(r)
 		user, err := service.GetUser(vars["username"])
 		if err != nil {
-			http.Error(rw, err.Error(), 400)
+			fmt.Errorf("%s", err.Error())
 			return
 		}
 
@@ -75,8 +65,11 @@ func GetUser(service user.UsersService) func(http.ResponseWriter, *http.Request)
 			return
 		}
 
-		rw.WriteHeader(http.StatusOK)
-		rw.Write(result)
-		return
+		writeSuccesMessage(rw, result)
 	}
+}
+
+func writeSuccesMessage(rw http.ResponseWriter, result []byte) {
+	rw.WriteHeader(http.StatusOK)
+	rw.Write(result)
 }

@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 type UsersService interface {
@@ -11,7 +13,6 @@ type UsersService interface {
 	SignIn() error
 	GetUser(userName string) (UserResponse, error)
 	GetUsers() (UsersOut, error)
-	Update() error
 }
 type Repository interface {
 	// GetUser Dashboard(ctx context.Context) (Aggregate, error)
@@ -29,6 +30,12 @@ type Users struct {
 
 func (u Users) SignUp(user User) (string, error) {
 	user.Created = time.Now()
+	hash, err := hashPassword(user.Password)
+	if err != nil {
+		return "", fmt.Errorf("service.SignUp failed: %w", err)
+	}
+
+	user.Password = hash
 
 	aggregate, err := u.NewAggregate(user)
 	if err != nil {
@@ -53,11 +60,12 @@ func (u Users) GetUser(userName string) (UserResponse, error) {
 		return UserResponse{}, fmt.Errorf("database.GetUser failed: %w", err)
 	}
 
+	user := aggregate.User()
 	return UserResponse{
-		Username:  aggregate.User().Username,
-		Email:     aggregate.User().Email,
+		Username:  user.Username,
+		Email:     user.Email,
 		Portfolio: nil,
-		Created:   aggregate.User().Created,
+		Created:   user.Created,
 	}, nil
 }
 
@@ -91,7 +99,7 @@ func (u Users) SignIn() error {
 	panic("implement me")
 }
 
-func (u Users) Update() error {
-	// TODO implement me
-	panic("implement me")
+func hashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 15)
+	return string(hash), err
 }
