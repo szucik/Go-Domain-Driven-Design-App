@@ -27,7 +27,7 @@ func SignUp(service user.UsersService) func(http.ResponseWriter, *http.Request) 
 			return
 		}
 
-		writeSuccesMessage(rw, []byte(username))
+		writeSuccessMessage(rw, []byte(username))
 	}
 }
 
@@ -45,7 +45,7 @@ func GetUsers(service user.UsersService) func(http.ResponseWriter, *http.Request
 			return
 		}
 
-		writeSuccesMessage(rw, result)
+		writeSuccessMessage(rw, result)
 	}
 }
 
@@ -65,11 +65,11 @@ func GetUser(service user.UsersService) func(http.ResponseWriter, *http.Request)
 			return
 		}
 
-		writeSuccesMessage(rw, result)
+		writeSuccessMessage(rw, result)
 	}
 }
 
-func writeSuccesMessage(rw http.ResponseWriter, result []byte) {
+func writeSuccessMessage(rw http.ResponseWriter, result []byte) {
 	rw.WriteHeader(http.StatusOK)
 	rw.Write(result)
 }

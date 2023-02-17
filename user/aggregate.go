@@ -8,7 +8,7 @@ import (
 type Aggregate struct {
 	user        User
 	transaction *transaction.Transaction
-	portfolio   *portfolio.Portfolio
+	portfolio.Entity
 }
 
 func (a *Aggregate) User() User {
@@ -18,8 +18,4 @@ func (a *Aggregate) User() User {
 
 func (a *Aggregate) Transaction() *transaction.Transaction {
 	return a.transaction
-}
-
-func (a *Aggregate) Portfolio() *portfolio.Portfolio {
-	return a.portfolio
 }

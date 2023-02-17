@@ -32,6 +32,7 @@ func main() {
 	// SignUp
 	signUpRouter := sm.Methods(http.MethodPost).Subrouter()
 	signUpRouter.HandleFunc("/signup", handlers.SignUp(users))
+	signUpRouter.HandleFunc("/users/{username:[a-z, A-Z, 0-9]+}/portfolio", handlers.AddPortfolio(users))
 	// signUpRouter.Use(users.MiddlewareUserValid)
 
 	// Users
