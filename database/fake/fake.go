@@ -2,6 +2,7 @@ package fake
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"sync"
 
@@ -37,9 +38,10 @@ func (mr MemoryRepository) SignUp(aggregate user.Aggregate) (string, error) {
 			Message: "user already exists",
 			Type:    "DuplicateUser",
 		}
-
 	}
+
 	mr.user[aggregate.User().Username] = aggregate
+
 	return aggregate.User().Username, nil
 }
 
@@ -64,6 +66,7 @@ func (mr MemoryRepository) GetUser(username string) (user.Aggregate, error) {
 	if user, exist := mr.user[username]; exist {
 		return user, nil
 	}
+
 	return user.Aggregate{}, web.ErrorResponse{
 		TraceId: uuid.New().String(),
 		Code:    http.StatusNotFound,
@@ -80,4 +83,18 @@ func (mr MemoryRepository) UpdateUser(ctx context.Context) (user.Aggregate, erro
 func (mr MemoryRepository) Dashboard(ctx context.Context) (user.Aggregate, error) {
 	// TODO implement me
 	panic("implement me")
+}
+
+func (mr MemoryRepository) SaveAggregate(aggregate user.Aggregate) error {
+	mr.Lock()
+	defer mr.Unlock()
+
+	val, exist := mr.user[aggregate.User().Username]
+	if !exist {
+		return errors.New("user dont exist")
+	}
+
+	mr.user[val.User().Username] = aggregate
+
+	return nil
 }

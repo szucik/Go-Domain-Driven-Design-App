@@ -5,7 +5,11 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"golang.org/x/crypto/bcrypt"
+
+	"github.com/szucik/trade-helper/portfolio"
 )
 
 type UsersService interface {
@@ -13,13 +17,16 @@ type UsersService interface {
 	SignIn() error
 	GetUser(userName string) (UserResponse, error)
 	GetUsers() (UsersOut, error)
+	AddPortfolio(in AddPortfolioIn) (string, error)
 }
+
 type Repository interface {
 	// GetUser Dashboard(ctx context.Context) (Aggregate, error)
 	// SignIn(ctx context.Context) (Aggregate, error)
 	GetUser(userName string) (Aggregate, error)
 	GetUsers() ([]Aggregate, error)
 	SignUp(aggregate Aggregate) (string, error)
+	SaveAggregate(aggregate Aggregate) error
 }
 
 type Users struct {
@@ -61,16 +68,18 @@ func (u Users) GetUser(userName string) (UserResponse, error) {
 	}
 
 	user := aggregate.User()
+
 	return UserResponse{
 		Username:  user.Username,
 		Email:     user.Email,
-		Portfolio: nil,
+		Portfolio: aggregate.Portfolios(),
 		Created:   user.Created,
 	}, nil
 }
 
 func (u Users) GetUsers() (UsersOut, error) {
 	var response UsersOut
+
 	users, err := u.Database.GetUsers()
 	if err != nil {
 		return UsersOut{}, fmt.Errorf("database.GetUsers failed: %w", err)
@@ -90,13 +99,48 @@ func transformToUserResponse(aggregate Aggregate) UserResponse {
 		Username:  user.Username,
 		Email:     user.Email,
 		Created:   user.Created,
-		Portfolio: nil,
+		Portfolio: aggregate.Portfolios(),
 	}
 }
 
 func (u Users) SignIn() error {
 	// TODO implement me
 	panic("implement me")
+}
+
+type AddPortfolioIn struct {
+	UserName string
+	Name     string
+}
+
+func (u Users) AddPortfolio(in AddPortfolioIn) (name string, _ error) {
+	aggregate, err := u.Database.GetUser(in.UserName)
+	if err != nil {
+		return "", fmt.Errorf("database.GetUser failed: %w", err)
+	}
+
+	p := portfolio.Portfolio{
+		ID:              uuid.New(),
+		Name:            in.Name,
+		TotalBalance:    decimal.NewFromFloat(0),
+		TotalCost:       decimal.NewFromFloat(0),
+		TotalProfitLoss: decimal.NewFromInt(0),
+		ProfitLossDay:   decimal.NewFromInt(0),
+		Transaction:     nil,
+		Created:         time.Now(),
+	}
+
+	err = aggregate.AddPortfolio(p)
+	if err != nil {
+		return "", fmt.Errorf("aggregate.AddPortfolio failed: %w", err)
+	}
+
+	err = u.Database.SaveAggregate(aggregate)
+	if err != nil {
+		return "", err
+	}
+
+	return p.Name, nil
 }
 
 func hashPassword(password string) (string, error) {
