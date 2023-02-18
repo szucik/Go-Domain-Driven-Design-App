@@ -6,21 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
-
-	"github.com/szucik/trade-helper/transaction"
 )
 
 type Portfolio struct {
-	ID              uuid.UUID                 `json:"id"`
-	Name            string                    `json:"name,omitempty" validate:"required"`
-	TotalBalance    decimal.Decimal           `json:"total_balance"`
-	TotalCost       decimal.Decimal           `json:"total_cost"`
-	TotalProfitLoss decimal.Decimal           `json:"total_profit_loss"`
-	ProfitLossDay   decimal.Decimal           `json:"profit_loss_day"`
-	Transaction     []transaction.Transaction `json:"transactions"`
-	Created         time.Time                 `json:"created"`
+	Name            string          `json:"name,omitempty" validate:"required"`
+	TotalBalance    decimal.Decimal `json:"total_balance"`
+	TotalCost       decimal.Decimal `json:"total_cost"`
+	TotalProfitLoss decimal.Decimal `json:"total_profit_loss"`
+	ProfitLossDay   decimal.Decimal `json:"profit_loss_day"`
+	Created         time.Time       `json:"created"`
 }
 
 // Entity is an object with lifecycle (can be mutated by adding, removing and renaming). It can be embedded into other
@@ -31,6 +26,16 @@ type Entity struct {
 
 func (e *Entity) Portfolios() []Portfolio {
 	return e.portfolios
+}
+
+func (e *Entity) FindPortfolio(name string) (Portfolio, error) {
+	for _, p := range e.Portfolios() {
+		if p.Name == name {
+			return p, nil
+		}
+	}
+
+	return Portfolio{}, errors.New("the specified portfolio does not exist")
 }
 
 func (e *Entity) AddPortfolio(p Portfolio) error {

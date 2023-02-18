@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/szucik/trade-helper/transaction"
 	"github.com/szucik/trade-helper/user"
 	"github.com/szucik/trade-helper/web"
 )
@@ -15,11 +16,13 @@ import (
 type MemoryRepository struct {
 	user map[string]user.Aggregate
 	sync.Mutex
+	transactions map[string]map[string]map[uuid.UUID]transaction.Transaction
 }
 
 func NewDatabase() MemoryRepository {
 	return MemoryRepository{
-		user: map[string]user.Aggregate{},
+		user:         map[string]user.Aggregate{},
+		transactions: map[string]map[string]map[uuid.UUID]transaction.Transaction{},
 	}
 }
 
@@ -75,16 +78,6 @@ func (mr MemoryRepository) GetUser(username string) (user.Aggregate, error) {
 	}
 }
 
-func (mr MemoryRepository) UpdateUser(ctx context.Context) (user.Aggregate, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
-func (mr MemoryRepository) Dashboard(ctx context.Context) (user.Aggregate, error) {
-	// TODO implement me
-	panic("implement me")
-}
-
 func (mr MemoryRepository) SaveAggregate(aggregate user.Aggregate) error {
 	mr.Lock()
 	defer mr.Unlock()
@@ -97,4 +90,32 @@ func (mr MemoryRepository) SaveAggregate(aggregate user.Aggregate) error {
 	mr.user[val.User().Username] = aggregate
 
 	return nil
+}
+
+func (mr MemoryRepository) AddTransaction(vo transaction.ValueObject) (string, error) {
+	mr.Lock()
+	defer mr.Unlock()
+
+	t := vo.Transaction()
+
+	if mr.transactions[t.UserName] == nil {
+		mr.transactions[t.UserName] = make(map[string]map[uuid.UUID]transaction.Transaction)
+	}
+
+	if mr.transactions[t.UserName][t.PortfolioName] == nil {
+		mr.transactions[t.UserName][t.PortfolioName] = make(map[uuid.UUID]transaction.Transaction)
+	}
+
+	mr.transactions[t.UserName][t.PortfolioName][t.ID] = t
+	return t.Symbol, nil
+}
+
+func (mr MemoryRepository) UpdateUser(ctx context.Context) (user.Aggregate, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (mr MemoryRepository) Dashboard(ctx context.Context) (user.Aggregate, error) {
+	// TODO implement me
+	panic("implement me")
 }
