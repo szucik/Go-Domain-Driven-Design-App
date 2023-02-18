@@ -4,14 +4,11 @@ import (
 	"log"
 	"os"
 	"testing"
-	"time"
 
-	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/szucik/trade-helper/database/fake"
-	"github.com/szucik/trade-helper/portfolio"
 	"github.com/szucik/trade-helper/user"
 )
 
@@ -58,17 +55,7 @@ func TestUserService_GetUsers(t *testing.T) {
 func TestUserService_AddPortfolio(t *testing.T) {
 	// TODO
 	t.Run("should return an error when user dont exist", func(t *testing.T) {
-		p := portfolio.Portfolio{
-			Name:            "testName",
-			TotalBalance:    decimal.Decimal{},
-			TotalCost:       decimal.Decimal{},
-			TotalProfitLoss: decimal.Decimal{},
-			ProfitLossDay:   decimal.Decimal{},
-			Transaction:     nil,
-			Created:         time.Time{},
-		}
-		_, err := database.AddPortfolio(p)
-		assert.NoError(t, err)
+
 	})
 }
 

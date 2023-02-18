@@ -10,6 +10,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/szucik/trade-helper/portfolio"
+	"github.com/szucik/trade-helper/transaction"
 )
 
 type UsersService interface {
@@ -17,7 +18,8 @@ type UsersService interface {
 	SignIn() error
 	GetUser(userName string) (UserResponse, error)
 	GetUsers() (UsersOut, error)
-	AddPortfolio(in AddPortfolioIn) (string, error)
+	AddPortfolio(in PortfolioIn) (string, error)
+	AddTransaction(in TransactionIn) (string, error)
 }
 
 type Repository interface {
@@ -27,12 +29,54 @@ type Repository interface {
 	GetUsers() ([]Aggregate, error)
 	SignUp(aggregate Aggregate) (string, error)
 	SaveAggregate(aggregate Aggregate) error
+	AddTransaction(transaction transaction.ValueObject) (string, error)
 }
 
 type Users struct {
 	Logger       *log.Logger
 	Database     Repository
 	NewAggregate func(User) (Aggregate, error)
+}
+
+type TransactionIn struct {
+	UserName      string
+	PortfolioName string
+	Symbol        string
+	Amount        float64
+	Quantity      float64
+}
+
+func (u Users) AddTransaction(in TransactionIn) (string, error) {
+	aggregate, err := u.Database.GetUser(in.UserName)
+	if err != nil {
+		return "", fmt.Errorf("service.AddTransaction: %w", err)
+	}
+
+	_, err = aggregate.FindPortfolio(in.PortfolioName)
+	if err != nil {
+		return "", fmt.Errorf("service.AddTransaction: %w", err)
+	}
+
+	t, err := transaction.Transaction{
+		ID:            uuid.New(),
+		UserName:      in.UserName,
+		PortfolioName: in.PortfolioName,
+		Symbol:        in.Symbol,
+		Created:       time.Now(),
+		// Todo change this ->
+		Quantity: decimal.Decimal{},
+		Price:    decimal.Decimal{},
+	}.NewTransaction()
+	if err != nil {
+		return "", fmt.Errorf("NewTransaction error: %w", err)
+	}
+
+	id, err := u.Database.AddTransaction(t)
+
+	if err != nil {
+		return "", fmt.Errorf("Database.AddTransaction: %w", err)
+	}
+	return id, nil
 }
 
 func (u Users) SignUp(user User) (string, error) {
@@ -108,25 +152,23 @@ func (u Users) SignIn() error {
 	panic("implement me")
 }
 
-type AddPortfolioIn struct {
+type PortfolioIn struct {
 	UserName string
 	Name     string
 }
 
-func (u Users) AddPortfolio(in AddPortfolioIn) (name string, _ error) {
+func (u Users) AddPortfolio(in PortfolioIn) (name string, _ error) {
 	aggregate, err := u.Database.GetUser(in.UserName)
 	if err != nil {
 		return "", fmt.Errorf("database.GetUser failed: %w", err)
 	}
 
 	p := portfolio.Portfolio{
-		ID:              uuid.New(),
 		Name:            in.Name,
 		TotalBalance:    decimal.NewFromFloat(0),
 		TotalCost:       decimal.NewFromFloat(0),
 		TotalProfitLoss: decimal.NewFromInt(0),
 		ProfitLossDay:   decimal.NewFromInt(0),
-		Transaction:     nil,
 		Created:         time.Now(),
 	}
 
@@ -137,7 +179,7 @@ func (u Users) AddPortfolio(in AddPortfolioIn) (name string, _ error) {
 
 	err = u.Database.SaveAggregate(aggregate)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("aggregate.SaveAggregate failed: %w", err)
 	}
 
 	return p.Name, nil
