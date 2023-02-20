@@ -2,12 +2,12 @@ package portfolio_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/szucik/trade-helper/clock"
 	pto "github.com/szucik/trade-helper/portfolio"
 )
 
@@ -21,7 +21,7 @@ var (
 		TotalCost:       decimal.Decimal{},
 		TotalProfitLoss: decimal.Decimal{},
 		ProfitLossDay:   decimal.Decimal{},
-		Created:         time.Now(),
+		Created:         clock.FakeTime(),
 	}
 )
 
@@ -90,7 +90,7 @@ func portfolioInstances(t *testing.T) {
 		TotalCost:       decimal.Decimal{},
 		TotalProfitLoss: decimal.Decimal{},
 		ProfitLossDay:   decimal.Decimal{},
-		Created:         time.Now(),
+		Created:         clock.FakeTime(),
 	}
 
 	// when

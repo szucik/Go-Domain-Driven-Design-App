@@ -2,6 +2,7 @@ package transaction
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -9,27 +10,16 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+var emptyFieldErr = errors.New("this field must not be empty")
+
 type Transaction struct {
-	// the id for this transaction
-	// required: true
-	ID uuid.UUID `json:"id"`
-	// the id for this transaction
-	// required: true
-	UserName string `json:"user_id" validate:"required"`
-	// portfolio id  where the transaction will be stored
-	// required: true
-	PortfolioName string `json:"portfolio_id" validate:"required"`
-	// cryptocurrency short name
-	// required: true
-	// min length 2
-	Symbol string `json:"symbol" validate:"required"`
-	// the quantity of cryptocurrency purchased
-	// required: true
-	Quantity decimal.Decimal `json:"quantity" validate:"required"`
-	// the price of the purchased cryptocurrency
-	// required: true
-	Price   decimal.Decimal `json:"price" validate:"required"`
-	Created time.Time       `json:"created"`
+	ID            uuid.UUID       `json:"id"`
+	UserName      string          `json:"user_id" validate:"required"`
+	PortfolioName string          `json:"portfolio_id" validate:"required"`
+	Symbol        string          `json:"symbol" validate:"required"`
+	Quantity      decimal.Decimal `json:"quantity" validate:"required"`
+	Price         decimal.Decimal `json:"price" validate:"required"`
+	Created       time.Time       `json:"created"`
 }
 
 type ValueObject struct {
@@ -60,9 +50,16 @@ func (t Transaction) NewTransaction() (ValueObject, error) {
 }
 
 func (t Transaction) validate() error {
-	//  Todo more validation
-	if isEmpty(t.UserName) || isEmpty(t.PortfolioName) || isEmpty(t.Symbol) {
-		return errors.New("can't be empty")
+	switch {
+	case isEmpty(t.UserName):
+		return fmt.Errorf("%w: %s", emptyFieldErr, "username")
+	case isEmpty(t.PortfolioName):
+		return fmt.Errorf("%w: %s", emptyFieldErr, "portfolio-name")
+	case isEmpty(t.Symbol):
+		return fmt.Errorf("%w: %s", emptyFieldErr, "symbol")
+	}
+	if t.Quantity.LessThanOrEqual(decimal.NewFromInt(0)) {
+		return fmt.Errorf("%w: %s", emptyFieldErr, "quantity")
 	}
 
 	return nil

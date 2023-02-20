@@ -3,6 +3,7 @@ package fake
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"sync"
 
@@ -107,7 +108,7 @@ func (mr MemoryRepository) AddTransaction(vo transaction.ValueObject) (string, e
 	}
 
 	mr.transactions[t.UserName][t.PortfolioName][t.ID] = t
-	return t.Symbol, nil
+	return fmt.Sprintf("%s: %s", t.Symbol, t.Quantity), nil
 }
 
 func (mr MemoryRepository) UpdateUser(ctx context.Context) (user.Aggregate, error) {
