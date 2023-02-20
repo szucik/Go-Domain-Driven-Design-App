@@ -39,11 +39,11 @@ type Users struct {
 }
 
 type TransactionIn struct {
-	UserName      string
-	PortfolioName string
-	Symbol        string
-	Amount        float64
-	Quantity      float64
+	UserName      string `json:"user_name"`
+	PortfolioName string `json:"portfolio_name"`
+	Symbol        string `json:"symbol"`
+	Amount        string `json:"amount"`
+	Quantity      string `json:"quantity"`
 }
 
 func (u Users) AddTransaction(in TransactionIn) (string, error) {
@@ -57,15 +57,24 @@ func (u Users) AddTransaction(in TransactionIn) (string, error) {
 		return "", fmt.Errorf("service.AddTransaction: %w", err)
 	}
 
+	quantity, err := decimal.NewFromString(in.Quantity)
+	if err != nil {
+		return "", fmt.Errorf("service.AddTransaction: %w", err)
+	}
+
+	price, err := decimal.NewFromString(in.Amount)
+	if err != nil {
+		return "", fmt.Errorf("service.AddTransaction: %w", err)
+	}
+
 	t, err := transaction.Transaction{
 		ID:            uuid.New(),
 		UserName:      in.UserName,
 		PortfolioName: in.PortfolioName,
 		Symbol:        in.Symbol,
 		Created:       time.Now(),
-		// Todo change this ->
-		Quantity: decimal.Decimal{},
-		Price:    decimal.Decimal{},
+		Quantity:      quantity,
+		Price:         price,
 	}.NewTransaction()
 	if err != nil {
 		return "", fmt.Errorf("NewTransaction error: %w", err)
