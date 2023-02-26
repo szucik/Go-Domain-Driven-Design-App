@@ -19,15 +19,6 @@ var (
 		Database:     &database,
 		NewAggregate: user.User.NewAggregate,
 	}
-
-	instanceAggregate = func() user.Aggregate {
-		aggregate, err := user.User(testUser).NewAggregate()
-		if err != nil {
-			panic(err)
-		}
-
-		return aggregate
-	}()
 )
 
 func TestUserService_SignUp(t *testing.T) {
