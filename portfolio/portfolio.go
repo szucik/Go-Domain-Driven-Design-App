@@ -21,38 +21,29 @@ type Portfolio struct {
 // Entity is an object with lifecycle (can be mutated by adding, removing and renaming). It can be embedded into other
 // entities to avoid repetition.
 type Entity struct {
-	portfolios []Portfolio
+	portfolio Portfolio
 }
 
-func (e *Entity) Portfolios() []Portfolio {
-	return e.portfolios
-}
-
-func (e *Entity) FindPortfolio(name string) (Portfolio, error) {
-	for _, p := range e.Portfolios() {
-		if p.Name == name {
-			return p, nil
-		}
-	}
-
-	return Portfolio{}, errors.New("the specified portfolio does not exist")
-}
-
-func (e *Entity) AddPortfolio(p Portfolio) error {
+func (p Portfolio) NewPortfolio() (Entity, error) {
 	err := validateName(p.Name)
 	if err != nil {
-		return err
+		return Entity{}, err
 	}
 
-	for _, item := range e.Portfolios() {
-		if item.Name == p.Name {
-			return errors.New("this name is not available")
-		}
-	}
+	return Entity{
+		portfolio: Portfolio{
+			Name:            p.Name,
+			TotalBalance:    p.TotalBalance,
+			TotalCost:       p.TotalCost,
+			TotalProfitLoss: p.TotalProfitLoss,
+			ProfitLossDay:   p.ProfitLossDay,
+			Created:         p.Created,
+		},
+	}, nil
+}
 
-	e.portfolios = append(e.portfolios, p)
-
-	return nil
+func (e *Entity) Portfolio() Portfolio {
+	return e.portfolio
 }
 
 func validateName(name string) error {

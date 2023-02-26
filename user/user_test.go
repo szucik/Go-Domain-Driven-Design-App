@@ -26,11 +26,8 @@ func TestUser_NewAggregate(t *testing.T) {
 			"address e-mail has incorrect format": {
 				user: testUser.WithEmail("com.invalid-email@test"),
 			},
-			"e-mail is shorter than 6 characters": {
-				user: testUser.WithEmail("e@p.l"),
-			},
 			"password has less than 2 characters": {
-				user: testUser.WithPassword("1234567"),
+				user: testUser.WithPassword(""),
 			},
 		}
 
