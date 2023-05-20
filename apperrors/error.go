@@ -1,8 +1,11 @@
-package web
+package apperrors
 
 import (
-	"encoding/json"
+	"fmt"
+
 	"net/http"
+
+	"encoding/json"
 
 	"github.com/google/uuid"
 )
@@ -31,5 +34,14 @@ func BadRequestError(message, errorType string) ErrorResponse {
 		Code:    400,
 		Message: message,
 		Type:    errorType,
+	}
+}
+
+func UnprocessableEntityError(field string) ErrorResponse {
+	return ErrorResponse{
+		TraceId: uuid.New().String(),
+		Code:    422,
+		Message: fmt.Sprintf("A required parameter for the specified action is not supplied: %s", field),
+		Type:    "MissingParameter",
 	}
 }

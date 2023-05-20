@@ -30,15 +30,16 @@ func main() {
 	sm := mux.NewRouter()
 
 	// Post
-	signUpRouter := sm.Methods(http.MethodPost).Subrouter()
-	signUpRouter.HandleFunc("/signup", handlers.SignUp(users))
-	signUpRouter.HandleFunc(
+	postRouter := sm.Methods(http.MethodPost).Subrouter()
+	postRouter.HandleFunc("/signup", handlers.SignUp(users))
+	postRouter.HandleFunc("/signin", handlers.SignIn(users))
+	postRouter.HandleFunc(
 		"/users/{username:[a-z, A-Z, 0-9]+}/portfolio", handlers.AddPortfolio(users))
-	signUpRouter.HandleFunc(
+	postRouter.HandleFunc(
 		"/users/{username:[a-z, A-Z, 0-9]+}/portfolio/{name:[a-z, A-Z, 0-9]+}/transactions",
 		handlers.AddTransaction(users),
 	)
-	// signUpRouter.Use(users.MiddlewareUserValid)
+	// postRouter.Use(users.MiddlewareUserValid)
 
 	// Users
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
