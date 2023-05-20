@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"log"
+	"math/rand"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -15,17 +16,17 @@ import (
 
 type UsersService interface {
 	SignUp(user User) (string, error)
-	SignIn() error
-	GetUser(userName string) (UserResponse, error)
+	SignIn(credentials AuthCredentials) error
+	GetUserByEmail(email string) (UserResponse, error)
 	GetUsers() (UsersOut, error)
 	AddPortfolio(in PortfolioIn) (string, error)
 	AddTransaction(in TransactionIn) (string, error)
 }
 
 type Repository interface {
-	// GetUser Dashboard(ctx context.Context) (Aggregate, error)
+	// GetUserByEmail Dashboard(ctx context.Context) (Aggregate, error)
 	// SignIn(ctx context.Context) (Aggregate, error)
-	GetUser(userName string) (Aggregate, error)
+	GetUserByEmail(userName string) (Aggregate, error)
 	GetUsers() ([]Aggregate, error)
 	SignUp(aggregate Aggregate) (string, error)
 	SaveAggregate(aggregate Aggregate) error
@@ -63,6 +64,7 @@ func (u Users) SignUp(user User) (string, error) {
 	}
 
 	user.Password = hash
+	user.TokenHash = randStringBytes(15)
 
 	aggregate, err := u.NewAggregate(user)
 	if err != nil {
@@ -77,10 +79,10 @@ func (u Users) SignUp(user User) (string, error) {
 	return id, nil
 }
 
-func (u Users) GetUser(userName string) (UserResponse, error) {
-	aggregate, err := u.Database.GetUser(userName)
+func (u Users) GetUserByEmail(email string) (UserResponse, error) {
+	aggregate, err := u.Database.GetUserByEmail(email)
 	if err != nil {
-		return UserResponse{}, fmt.Errorf("database.GetUser failed: %w", err)
+		return UserResponse{}, fmt.Errorf("database.GetUserByEmail failed: %w", err)
 	}
 
 	return transformToUserResponse(aggregate), nil
@@ -102,9 +104,9 @@ func (u Users) GetUsers() (UsersOut, error) {
 }
 
 func (u Users) AddPortfolio(in PortfolioIn) (name string, _ error) {
-	aggregate, err := u.Database.GetUser(in.UserName)
+	aggregate, err := u.Database.GetUserByEmail(in.UserName)
 	if err != nil {
-		return "", fmt.Errorf("database.GetUser failed: %w", err)
+		return "", fmt.Errorf("database.GetUserByEmail failed: %w", err)
 	}
 
 	entity, err := portfolio.Portfolio{
@@ -134,7 +136,7 @@ func (u Users) AddPortfolio(in PortfolioIn) (name string, _ error) {
 }
 
 func (u Users) AddTransaction(in TransactionIn) (string, error) {
-	aggregate, err := u.Database.GetUser(in.UserName)
+	aggregate, err := u.Database.GetUserByEmail(in.UserName)
 	if err != nil {
 		return "", fmt.Errorf("service.AddTransaction: %w", err)
 	}
@@ -175,14 +177,30 @@ func (u Users) AddTransaction(in TransactionIn) (string, error) {
 	return id, nil
 }
 
-func (u Users) SignIn() error {
-	// TODO implement me
-	panic("implement me")
+func (u Users) SignIn(auth AuthCredentials) error {
+
+	//u.Database.GetUserByEmail()
+
+	err := comparePasswords(auth.Password, auth.Password)
+
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func hashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 15)
 	return string(hash), err
+}
+
+func comparePasswords(hashedPassword, providedPassword string) error {
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(providedPassword))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func transformToUserResponse(aggregate Aggregate) UserResponse {
@@ -199,4 +217,14 @@ func transformToUserResponse(aggregate Aggregate) UserResponse {
 		Created:   user.Created,
 		Portfolio: portfolios,
 	}
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func randStringBytes(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
 }

@@ -1,11 +1,11 @@
 package user
 
 import (
+	"github.com/szucik/trade-helper/apperrors"
 	"regexp"
 	"time"
 
 	"github.com/szucik/trade-helper/portfolio"
-	"github.com/szucik/trade-helper/web"
 )
 
 type User struct {
@@ -15,6 +15,11 @@ type User struct {
 	TokenHash string    `json:"token_hash"`
 	Created   time.Time `json:"created"`
 	Updated   time.Time `json:"updated"`
+}
+
+type AuthCredentials struct {
+	Email    string `json:"email" validate:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
 type UserResponse struct {
@@ -27,20 +32,20 @@ type UserResponse struct {
 func (u User) NewAggregate() (Aggregate, error) {
 	switch {
 	case !isLengthValid(u.Username, 2):
-		return Aggregate{}, web.BadRequestError(
+		return Aggregate{}, apperrors.BadRequestError(
 			"User name is to short",
 			"UserParamsValidation",
 		)
 
 	case !isEmailValid(u.Email):
-		return Aggregate{}, web.BadRequestError(
+		return Aggregate{}, apperrors.BadRequestError(
 			"Invalid user email",
 			"UserParamsValidation",
 		)
 
 	case !isLengthValid(u.Password, 8):
 		return Aggregate{},
-			web.BadRequestError(
+			apperrors.BadRequestError(
 				"Password is to short, it should be longer than 8 characters",
 				"UserParamsValidation",
 			)

@@ -31,6 +31,26 @@ func SignUp(service user.UsersService) func(http.ResponseWriter, *http.Request) 
 	}
 }
 
+func SignIn(service user.UsersService) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		var credentials user.AuthCredentials
+
+		err := json.NewDecoder(r.Body).Decode(&credentials)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		err = service.SignIn(credentials)
+		if err != nil {
+			http.Error(rw, err.Error(), 400)
+			return
+		}
+
+		//writeSuccessMessage(rw, []byte(username))
+	}
+}
+
 func GetUsers(service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		users, err := service.GetUsers()
@@ -52,7 +72,7 @@ func GetUsers(service user.UsersService) func(http.ResponseWriter, *http.Request
 func GetUser(service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
-		user, err := service.GetUser(vars["username"])
+		user, err := service.GetUserByEmail(vars["email"])
 		if err != nil {
 			fmt.Errorf("%s", err.Error())
 			return

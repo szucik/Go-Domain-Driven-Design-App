@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/szucik/trade-helper/apperrors"
 	"net/http"
 	"sync"
 
@@ -11,18 +12,21 @@ import (
 
 	"github.com/szucik/trade-helper/transaction"
 	"github.com/szucik/trade-helper/user"
-	"github.com/szucik/trade-helper/web"
 )
 
+type userKey struct {
+	name string
+}
+
 type MemoryRepository struct {
-	user map[string]user.Aggregate
+	user map[userKey]user.Aggregate
 	sync.Mutex
 	transactions map[string]map[string]map[uuid.UUID]transaction.Transaction
 }
 
 func NewDatabase() MemoryRepository {
 	return MemoryRepository{
-		user:         map[string]user.Aggregate{},
+		user:         map[userKey]user.Aggregate{},
 		transactions: map[string]map[string]map[uuid.UUID]transaction.Transaction{},
 	}
 }
@@ -32,19 +36,22 @@ func (mr MemoryRepository) SignUp(aggregate user.Aggregate) (string, error) {
 	defer mr.Unlock()
 
 	if mr.user == nil {
-		mr.user = make(map[string]user.Aggregate)
+		mr.user = make(map[userKey]user.Aggregate)
 	}
 
-	if _, ok := mr.user[aggregate.User().Username]; ok {
-		return "", web.ErrorResponse{
-			TraceId: uuid.New().String(),
+	key := userKey{
+		name: aggregate.User().Email,
+	}
+
+	if _, ok := mr.user[key]; ok {
+		return "", apperrors.ErrorResponse{
 			Code:    http.StatusBadRequest,
 			Message: "user already exists",
 			Type:    "DuplicateUser",
 		}
 	}
 
-	mr.user[aggregate.User().Username] = aggregate
+	mr.user[key] = aggregate
 
 	return aggregate.User().Username, nil
 }
@@ -63,16 +70,19 @@ func (mr MemoryRepository) GetUsers() ([]user.Aggregate, error) {
 	return users, nil
 }
 
-func (mr MemoryRepository) GetUser(username string) (user.Aggregate, error) {
+func (mr MemoryRepository) GetUserByEmail(email string) (user.Aggregate, error) {
 	mr.Lock()
 	defer mr.Unlock()
 
-	if user, exist := mr.user[username]; exist {
+	key := userKey{
+		name: email,
+	}
+
+	if user, exist := mr.user[key]; exist {
 		return user, nil
 	}
 
-	return user.Aggregate{}, web.ErrorResponse{
-		TraceId: uuid.New().String(),
+	return user.Aggregate{}, apperrors.ErrorResponse{
 		Code:    http.StatusNotFound,
 		Message: "user not found",
 		Type:    "UserNotFound",
@@ -83,12 +93,17 @@ func (mr MemoryRepository) SaveAggregate(aggregate user.Aggregate) error {
 	mr.Lock()
 	defer mr.Unlock()
 
-	val, exist := mr.user[aggregate.User().Username]
-	if !exist {
-		return errors.New("user dont exist")
+	key := userKey{
+		name: aggregate.User().Email,
 	}
 
-	mr.user[val.User().Username] = aggregate
+	_, exist := mr.user[key]
+	if !exist {
+		return errors.New("user dont exist")
+
+	}
+
+	mr.user[key] = aggregate
 
 	return nil
 }
