@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -10,7 +11,7 @@ import (
 	"github.com/szucik/trade-helper/user"
 )
 
-func SignUp(service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func SignUp(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var user user.User
 
@@ -20,9 +21,10 @@ func SignUp(service user.UsersService) func(http.ResponseWriter, *http.Request) 
 			return
 		}
 
-		username, err := service.SignUp(user)
+		username, err := service.SignUp(ctx, user)
 
 		if err != nil {
+			//TODO - handle errors, or logger
 			http.Error(rw, err.Error(), 400)
 			return
 		}
@@ -31,7 +33,7 @@ func SignUp(service user.UsersService) func(http.ResponseWriter, *http.Request) 
 	}
 }
 
-func SignIn(service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func SignIn(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var credentials user.AuthCredentials
 
@@ -41,7 +43,7 @@ func SignIn(service user.UsersService) func(http.ResponseWriter, *http.Request) 
 			return
 		}
 
-		err = service.SignIn(credentials)
+		err = service.SignIn(ctx, credentials)
 		if err != nil {
 			http.Error(rw, err.Error(), 400)
 			return
@@ -51,9 +53,9 @@ func SignIn(service user.UsersService) func(http.ResponseWriter, *http.Request) 
 	}
 }
 
-func GetUsers(service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func GetUsers(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		users, err := service.GetUsers()
+		users, err := service.GetUsers(ctx)
 		if err != nil {
 			http.Error(rw, err.Error(), 400)
 			return
@@ -69,10 +71,10 @@ func GetUsers(service user.UsersService) func(http.ResponseWriter, *http.Request
 	}
 }
 
-func GetUser(service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func GetUser(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
-		user, err := service.GetUserByEmail(vars["email"])
+		user, err := service.GetUserByEmail(ctx, vars["email"])
 		if err != nil {
 			fmt.Errorf("%s", err.Error())
 			return

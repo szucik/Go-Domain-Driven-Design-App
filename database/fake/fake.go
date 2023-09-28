@@ -31,7 +31,7 @@ func NewDatabase() MemoryRepository {
 	}
 }
 
-func (mr MemoryRepository) SignUp(aggregate user.Aggregate) (string, error) {
+func (mr MemoryRepository) SignUp(_ context.Context, aggregate user.Aggregate) (string, error) {
 	mr.Lock()
 	defer mr.Unlock()
 
@@ -56,7 +56,7 @@ func (mr MemoryRepository) SignUp(aggregate user.Aggregate) (string, error) {
 	return aggregate.User().Username, nil
 }
 
-func (mr MemoryRepository) GetUsers() ([]user.Aggregate, error) {
+func (mr MemoryRepository) GetUsers(_ context.Context) ([]user.Aggregate, error) {
 	mr.Lock()
 	defer mr.Unlock()
 
@@ -70,7 +70,7 @@ func (mr MemoryRepository) GetUsers() ([]user.Aggregate, error) {
 	return users, nil
 }
 
-func (mr MemoryRepository) GetUserByEmail(email string) (user.Aggregate, error) {
+func (mr MemoryRepository) GetUserByEmail(_ context.Context, email string) (user.Aggregate, error) {
 	mr.Lock()
 	defer mr.Unlock()
 
@@ -89,7 +89,7 @@ func (mr MemoryRepository) GetUserByEmail(email string) (user.Aggregate, error) 
 	}
 }
 
-func (mr MemoryRepository) SaveAggregate(aggregate user.Aggregate) error {
+func (mr MemoryRepository) SaveAggregate(_ context.Context, aggregate user.Aggregate) error {
 	mr.Lock()
 	defer mr.Unlock()
 
@@ -108,7 +108,7 @@ func (mr MemoryRepository) SaveAggregate(aggregate user.Aggregate) error {
 	return nil
 }
 
-func (mr MemoryRepository) AddTransaction(vo transaction.ValueObject) (string, error) {
+func (mr MemoryRepository) AddTransaction(_ context.Context, vo transaction.ValueObject) (string, error) {
 	mr.Lock()
 	defer mr.Unlock()
 

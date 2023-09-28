@@ -1,6 +1,7 @@
 package user
 
 import (
+	"context"
 	"fmt"
 	"github.com/google/uuid"
 	"log"
@@ -15,22 +16,22 @@ import (
 )
 
 type UsersService interface {
-	SignUp(user User) (string, error)
-	SignIn(credentials AuthCredentials) error
-	GetUserByEmail(email string) (UserResponse, error)
-	GetUsers() (UsersOut, error)
-	AddPortfolio(in PortfolioIn) (string, error)
-	AddTransaction(in TransactionIn) (string, error)
+	SignUp(ctx context.Context, user User) (string, error)
+	SignIn(ctx context.Context, credentials AuthCredentials) error
+	GetUserByEmail(ctx context.Context, email string) (UserResponse, error)
+	GetUsers(ctx context.Context) (UsersOut, error)
+	AddPortfolio(ctx context.Context, in PortfolioIn) (string, error)
+	AddTransaction(ctx context.Context, in TransactionIn) (string, error)
 }
 
 type Repository interface {
 	// GetUserByEmail Dashboard(ctx context.Context) (Aggregate, error)
 	// SignIn(ctx context.Context) (Aggregate, error)
-	GetUserByEmail(userName string) (Aggregate, error)
-	GetUsers() ([]Aggregate, error)
-	SignUp(aggregate Aggregate) (string, error)
-	SaveAggregate(aggregate Aggregate) error
-	AddTransaction(transaction transaction.ValueObject) (string, error)
+	GetUserByEmail(ctx context.Context, userName string) (Aggregate, error)
+	GetUsers(ctx context.Context) ([]Aggregate, error)
+	SignUp(ctx context.Context, aggregate Aggregate) (string, error)
+	SaveAggregate(ctx context.Context, aggregate Aggregate) error
+	AddTransaction(ctx context.Context, transaction transaction.ValueObject) (string, error)
 }
 
 type Users struct {
@@ -56,7 +57,7 @@ type UsersOut struct {
 	Users []UserResponse
 }
 
-func (u Users) SignUp(user User) (string, error) {
+func (u Users) SignUp(ctx context.Context, user User) (string, error) {
 	user.Created = time.Now()
 	hash, err := hashPassword(user.Password)
 	if err != nil {
@@ -71,7 +72,7 @@ func (u Users) SignUp(user User) (string, error) {
 		return "", err
 	}
 
-	id, err := u.Database.SignUp(aggregate)
+	id, err := u.Database.SignUp(ctx, aggregate)
 	if err != nil {
 		return "", fmt.Errorf("database.SignUp failed: %w", err)
 	}
@@ -79,8 +80,8 @@ func (u Users) SignUp(user User) (string, error) {
 	return id, nil
 }
 
-func (u Users) GetUserByEmail(email string) (UserResponse, error) {
-	aggregate, err := u.Database.GetUserByEmail(email)
+func (u Users) GetUserByEmail(ctx context.Context, email string) (UserResponse, error) {
+	aggregate, err := u.Database.GetUserByEmail(ctx, email)
 	if err != nil {
 		return UserResponse{}, fmt.Errorf("database.GetUserByEmail failed: %w", err)
 	}
@@ -88,10 +89,10 @@ func (u Users) GetUserByEmail(email string) (UserResponse, error) {
 	return transformToUserResponse(aggregate), nil
 }
 
-func (u Users) GetUsers() (UsersOut, error) {
+func (u Users) GetUsers(ctx context.Context) (UsersOut, error) {
 	var response UsersOut
 
-	users, err := u.Database.GetUsers()
+	users, err := u.Database.GetUsers(ctx)
 	if err != nil {
 		return UsersOut{}, fmt.Errorf("database.GetUsers failed: %w", err)
 	}
@@ -103,8 +104,8 @@ func (u Users) GetUsers() (UsersOut, error) {
 	return response, nil
 }
 
-func (u Users) AddPortfolio(in PortfolioIn) (name string, _ error) {
-	aggregate, err := u.Database.GetUserByEmail(in.UserName)
+func (u Users) AddPortfolio(ctx context.Context, in PortfolioIn) (name string, _ error) {
+	aggregate, err := u.Database.GetUserByEmail(ctx, in.UserName)
 	if err != nil {
 		return "", fmt.Errorf("database.GetUserByEmail failed: %w", err)
 	}
@@ -127,7 +128,7 @@ func (u Users) AddPortfolio(in PortfolioIn) (name string, _ error) {
 		return "", fmt.Errorf("aggregate.AddPortfolio failed: %w", err)
 	}
 
-	err = u.Database.SaveAggregate(aggregate)
+	err = u.Database.SaveAggregate(ctx, aggregate)
 	if err != nil {
 		return "", fmt.Errorf("aggregate.SaveAggregate failed: %w", err)
 	}
@@ -135,8 +136,8 @@ func (u Users) AddPortfolio(in PortfolioIn) (name string, _ error) {
 	return entity.Portfolio().Name, nil
 }
 
-func (u Users) AddTransaction(in TransactionIn) (string, error) {
-	aggregate, err := u.Database.GetUserByEmail(in.UserName)
+func (u Users) AddTransaction(ctx context.Context, in TransactionIn) (string, error) {
+	aggregate, err := u.Database.GetUserByEmail(ctx, in.UserName)
 	if err != nil {
 		return "", fmt.Errorf("service.AddTransaction: %w", err)
 	}
@@ -169,7 +170,7 @@ func (u Users) AddTransaction(in TransactionIn) (string, error) {
 		return "", fmt.Errorf("NewTransaction error: %w", err)
 	}
 
-	id, err := u.Database.AddTransaction(t)
+	id, err := u.Database.AddTransaction(ctx, t)
 
 	if err != nil {
 		return "", fmt.Errorf("Database.AddTransaction: %w", err)
@@ -177,7 +178,7 @@ func (u Users) AddTransaction(in TransactionIn) (string, error) {
 	return id, nil
 }
 
-func (u Users) SignIn(auth AuthCredentials) error {
+func (u Users) SignIn(ctx context.Context, auth AuthCredentials) error {
 
 	//u.Database.GetUserByEmail()
 

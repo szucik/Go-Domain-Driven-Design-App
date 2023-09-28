@@ -8,7 +8,8 @@ import (
 	"os/signal"
 	"time"
 
-	"github.com/szucik/trade-helper/database/fake"
+	"github.com/szucik/trade-helper/database/mongo"
+
 	"github.com/szucik/trade-helper/web/handlers"
 
 	"github.com/szucik/trade-helper/user"
@@ -18,9 +19,15 @@ import (
 )
 
 func main() {
-	logger := log.New(os.Stdout, "logger", log.LstdFlags)
-	database := fake.NewDatabase()
+	ctx, stop := context.WithTimeout(context.Background(), 30*time.Second)
+	defer stop()
 
+	logger := log.New(os.Stdout, "logger", log.LstdFlags)
+	//database := fake.NewDatabase()
+	database, err := mongo.NewDatabase(ctx)
+	if err != nil {
+		panic(err)
+	}
 	users := user.Users{
 		Logger:       logger,
 		Database:     &database,
@@ -31,20 +38,20 @@ func main() {
 
 	// Post
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
-	postRouter.HandleFunc("/signup", handlers.SignUp(users))
-	postRouter.HandleFunc("/signin", handlers.SignIn(users))
+	postRouter.HandleFunc("/signup", handlers.SignUp(ctx, users))
+	postRouter.HandleFunc("/signin", handlers.SignIn(ctx, users))
 	postRouter.HandleFunc(
-		"/users/{username:[a-z, A-Z, 0-9]+}/portfolio", handlers.AddPortfolio(users))
+		"/users/{username:[a-z, A-Z, 0-9]+}/portfolio", handlers.AddPortfolio(ctx, users))
 	postRouter.HandleFunc(
 		"/users/{username:[a-z, A-Z, 0-9]+}/portfolio/{name:[a-z, A-Z, 0-9]+}/transactions",
-		handlers.AddTransaction(users),
+		handlers.AddTransaction(ctx, users),
 	)
 	// postRouter.Use(users.MiddlewareUserValid)
 
 	// Users
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
-	getRouter.HandleFunc("/users", handlers.GetUsers(users))
-	getRouter.HandleFunc("/users/{username:[a-z, A-Z, 0-9]+}", handlers.GetUser(users))
+	getRouter.HandleFunc("/users", handlers.GetUsers(ctx, users))
+	getRouter.HandleFunc("/users/{username:[a-z, A-Z, 0-9]+}", handlers.GetUser(ctx, users))
 
 	// putRouter := sm.Methods(http.MethodPut).Subrouter()
 	// putRouter.HandleFunc("/users/{id:[0-9]+}", users.UpdateUser)
@@ -65,20 +72,25 @@ func main() {
 	}
 
 	go func() {
+		log.Println("Starting server on port 9090")
+
 		err := s.ListenAndServe()
 		if err != nil {
-			logger.Fatal(err)
+			log.Fatal(err)
+			os.Exit(1)
 		}
 	}()
 
-	sigChan := make(chan os.Signal)
-	signal.Notify(sigChan, os.Interrupt)
-	signal.Notify(sigChan, os.Kill)
+	// trap sigterm or interupt and gracefully shutdown the server
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, os.Kill)
 
-	sig := <-sigChan
-	logger.Println("Received terminate, graceful shutdown", sig)
-	s.ListenAndServe()
+	// Block until a signal is received.
+	sig := <-c
+	log.Println("Got signal:", sig)
 
-	ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
+	// gracefully shutdown the server, waiting max 30 seconds for current operations to complete
+	ctx, _ = context.WithTimeout(context.Background(), 30*time.Second)
 	s.Shutdown(ctx)
 }
