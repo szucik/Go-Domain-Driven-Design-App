@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 
@@ -9,7 +10,7 @@ import (
 	"github.com/szucik/trade-helper/user"
 )
 
-func AddPortfolio(service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func AddPortfolio(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var p user.PortfolioIn
 		username := mux.Vars(r)["username"]
@@ -21,7 +22,7 @@ func AddPortfolio(service user.UsersService) func(http.ResponseWriter, *http.Req
 		}
 
 		p.UserName = username
-		name, err := service.AddPortfolio(p)
+		name, err := service.AddPortfolio(ctx, p)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 			return
@@ -31,7 +32,7 @@ func AddPortfolio(service user.UsersService) func(http.ResponseWriter, *http.Req
 	}
 }
 
-func AddTransaction(service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func AddTransaction(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var p user.TransactionIn
 		vars := mux.Vars(r)
@@ -45,7 +46,7 @@ func AddTransaction(service user.UsersService) func(http.ResponseWriter, *http.R
 		p.UserName = vars["username"]
 		p.PortfolioName = vars["name"]
 
-		result, err := service.AddTransaction(p)
+		result, err := service.AddTransaction(ctx, p)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 			return

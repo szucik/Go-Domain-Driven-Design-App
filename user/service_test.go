@@ -1,6 +1,7 @@
 package user_test
 
 import (
+	"context"
 	"log"
 	"os"
 	"testing"
@@ -13,6 +14,7 @@ import (
 )
 
 var (
+	ctx         = context.Background()
 	database    = fake.NewDatabase()
 	userService = user.Users{
 		Logger:       log.New(os.Stdout, "logger", log.LstdFlags),
@@ -24,7 +26,7 @@ var (
 func TestUserService_SignUp(t *testing.T) {
 	t.Run("should return userName when user creation is complete", func(t *testing.T) {
 		// when
-		username, err := userService.SignUp(user.User(testUser))
+		username, err := userService.SignUp(nil, user.User(testUser))
 		assert.NoError(t, err)
 		// then
 		assert.Equal(t, instanceAggregate.User().Username, username)
@@ -36,7 +38,7 @@ func TestUserService_GetUsers(t *testing.T) {
 		databaseWithThreeUserInstances(t)
 
 		// when
-		out, err := userService.GetUsers()
+		out, err := userService.GetUsers(ctx)
 		require.NoError(t, err)
 		// then
 		assert.Len(t, out.Users, 3, "Three user instances")
@@ -65,7 +67,7 @@ func databaseWithThreeUserInstances(t *testing.T) {
 	for _, user := range users {
 		aggregate, err := user.NewAggregate()
 		require.NoError(t, err)
-		_, err = database.SignUp(aggregate)
+		_, err = database.SignUp(ctx, aggregate)
 		require.NoError(t, err)
 	}
 }
