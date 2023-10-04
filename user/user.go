@@ -9,12 +9,12 @@ import (
 )
 
 type User struct {
-	Username  string    `json:"username" validate:"required"`
-	Email     string    `json:"email" validate:"required"`
-	Password  string    `json:"password" validate:"required"`
-	TokenHash string    `json:"token_hash"`
-	Created   time.Time `json:"created"`
-	Updated   time.Time `json:"updated"`
+	Username  string
+	Email     string
+	Password  string
+	TokenHash string
+	Created   time.Time
+	Updated   time.Time
 }
 
 type AuthCredentials struct {

@@ -19,6 +19,7 @@ type UsersService interface {
 	SignUp(ctx context.Context, user User) (string, error)
 	SignIn(ctx context.Context, credentials AuthCredentials) error
 	GetUserByEmail(ctx context.Context, email string) (UserResponse, error)
+	GetUserByName(ctx context.Context, name string) (UserResponse, error)
 	GetUsers(ctx context.Context) (UsersOut, error)
 	AddPortfolio(ctx context.Context, in PortfolioIn) (string, error)
 	AddTransaction(ctx context.Context, in TransactionIn) (string, error)
@@ -27,7 +28,8 @@ type UsersService interface {
 type Repository interface {
 	// GetUserByEmail Dashboard(ctx context.Context) (Aggregate, error)
 	// SignIn(ctx context.Context) (Aggregate, error)
-	GetUserByEmail(ctx context.Context, userName string) (Aggregate, error)
+	GetUserByEmail(ctx context.Context, email string) (Aggregate, error)
+	GetUserByName(ctx context.Context, userName string) (Aggregate, error)
 	GetUsers(ctx context.Context) ([]Aggregate, error)
 	SignUp(ctx context.Context, aggregate Aggregate) (string, error)
 	SaveAggregate(ctx context.Context, aggregate Aggregate) error
@@ -78,6 +80,15 @@ func (u Users) SignUp(ctx context.Context, user User) (string, error) {
 	}
 
 	return id, nil
+}
+
+func (u Users) GetUserByName(ctx context.Context, username string) (UserResponse, error) {
+	aggregate, err := u.Database.GetUserByName(ctx, username)
+	if err != nil {
+		return UserResponse{}, fmt.Errorf("database.GetUserByName failed: %w", err)
+	}
+
+	return transformToUserResponse(aggregate), nil
 }
 
 func (u Users) GetUserByEmail(ctx context.Context, email string) (UserResponse, error) {

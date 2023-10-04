@@ -28,6 +28,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	users := user.Users{
 		Logger:       logger,
 		Database:     &database,
@@ -52,6 +53,7 @@ func main() {
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/users", handlers.GetUsers(ctx, users))
 	getRouter.HandleFunc("/users/{username:[a-z, A-Z, 0-9]+}", handlers.GetUser(ctx, users))
+	//getRouter.HandleFunc("/users/{email:[a-z, A-Z, 0-9]+}", handlers.GetUser(ctx, users))
 
 	// putRouter := sm.Methods(http.MethodPut).Subrouter()
 	// putRouter.HandleFunc("/users/{id:[0-9]+}", users.UpdateUser)
@@ -74,7 +76,7 @@ func main() {
 	go func() {
 		log.Println("Starting server on port 9090")
 
-		err := s.ListenAndServe()
+		err = s.ListenAndServe()
 		if err != nil {
 			log.Fatal(err)
 			os.Exit(1)
@@ -91,6 +93,5 @@ func main() {
 	log.Println("Got signal:", sig)
 
 	// gracefully shutdown the server, waiting max 30 seconds for current operations to complete
-	ctx, _ = context.WithTimeout(context.Background(), 30*time.Second)
 	s.Shutdown(ctx)
 }

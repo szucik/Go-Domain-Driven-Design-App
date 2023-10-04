@@ -17,7 +17,7 @@ import (
 const uri = "mongodb://127.0.0.1:27017"
 
 type Repository struct {
-	user         *mongo.Collection
+	users        *mongo.Collection
 	transactions *mongo.Collection
 }
 
@@ -28,35 +28,53 @@ func NewDatabase(ctx context.Context) (Repository, error) {
 	}
 
 	return Repository{
-		user:         db.Collection("user"),
+		users:        db.Collection("users"),
 		transactions: db.Collection("transactions"),
 	}, nil
 }
 
 func (r Repository) SignUp(ctx context.Context, aggregate user.Aggregate) (string, error) {
-	document := document.NewDocument(aggregate)
+	doc := document.NewDocument(aggregate)
+	filter := bson.M{"email": doc.User.Email}
+	update := bson.M{"$setOnInsert": doc}
 
-	one, err := r.user.InsertOne(ctx, document)
+	updateOptions := options.Update().SetUpsert(true)
+	_, err := r.users.UpdateOne(ctx, filter, update, updateOptions)
 	if err != nil {
 		return "", err
 	}
 
-	fmt.Println(one.InsertedID)
 	return aggregate.User().Email, nil
 }
 
+func (r Repository) GetUserByName(ctx context.Context, userName string) (user.Aggregate, error) {
+	var doc document.Document
+	filter := bson.M{"username": userName}
+	err := r.users.FindOne(ctx, filter).Decode(&doc)
+	if err != nil {
+		return user.Aggregate{}, fmt.Errorf("GetUserByName failed: %w", err)
+	}
+	aggregate, err := doc.NewAggregate()
+	if err != nil {
+		return user.Aggregate{}, err
+	}
+	//Todo - create aggregate from bson
+	return aggregate, nil
+}
+
 func (r Repository) GetUserByEmail(ctx context.Context, email string) (user.Aggregate, error) {
-	var result user.Aggregate
-	filter := bson.D{{Key: "email", Value: email}}
-	err := r.user.FindOne(ctx, filter).Decode(&result)
+	var result user.User
+	filter := bson.M{"email": email}
+	err := r.users.FindOne(ctx, filter).Decode(&result)
 	if err != nil {
 		return user.Aggregate{}, fmt.Errorf("GetUserByEmail failed: %w", err)
 	}
-	return result, nil
+	//Todo - create aggregate  from bson
+	return user.Aggregate{}, nil
 }
 
 func (r Repository) GetUsers(ctx context.Context) ([]user.Aggregate, error) {
-	cursor, err := r.user.Find(ctx, bson.D{})
+	cursor, err := r.users.Find(ctx, bson.D{})
 	if err != nil {
 		return nil, fmt.Errorf("GetUsers failed: %w", err)
 	}
@@ -68,7 +86,7 @@ func (r Repository) GetUsers(ctx context.Context) ([]user.Aggregate, error) {
 }
 
 func (r Repository) SaveAggregate(ctx context.Context, aggregate user.Aggregate) error {
-	_, err := r.user.InsertOne(ctx, aggregate)
+	_, err := r.users.InsertOne(ctx, aggregate)
 	if err != nil {
 		return fmt.Errorf("SaveAggregate failed: %w", err)
 	}
@@ -82,30 +100,6 @@ func (r Repository) AddTransaction(ctx context.Context, transaction transaction.
 	}
 	return res.InsertedID.(primitive.ObjectID).Hex(), nil
 }
-
-// func (r Repository) GetUserByEmail(ctx context.Context, userName string) (user.Aggregate, error) {
-// 	//TODO implement me
-// 	panic("implement me")
-// }
-
-// func (r Repository) GetUsers(ctx context.Context) ([]user.Aggregate, error) {
-// 	//TODO implement me
-// 	panic("implement me")
-// }
-
-// 	fmt.Println(one)
-// 	return aggregate.User().Email, nil
-// }
-
-// func (r Repository) SaveAggregate(ctx context.Context, aggregate user.Aggregate) error {
-
-// 	panic("implement me")
-// }
-
-// func (r Repository) AddTransaction(ctx context.Context, transaction transaction.ValueObject) (string, error) {
-// 	//TODO implement me
-// 	panic("implement me")
-// }
 
 func connectWithMongoDB(ctx context.Context) (*mongo.Database, error) {
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
@@ -124,7 +118,7 @@ func connectWithMongoDB(ctx context.Context) (*mongo.Database, error) {
 
 	fmt.Println("Successfully connected to MongoDB!")
 
-	db := client.Database("database_name") // replace with your database name
+	db := client.Database("tradehelper") // replace with your database name
 
 	return db, nil
 }

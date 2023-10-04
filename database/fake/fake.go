@@ -19,14 +19,14 @@ type userKey struct {
 }
 
 type MemoryRepository struct {
-	user map[userKey]user.Aggregate
+	users map[userKey]user.Aggregate
 	sync.Mutex
 	transactions map[string]map[string]map[uuid.UUID]transaction.Transaction
 }
 
 func NewDatabase() MemoryRepository {
 	return MemoryRepository{
-		user:         map[userKey]user.Aggregate{},
+		users:        map[userKey]user.Aggregate{},
 		transactions: map[string]map[string]map[uuid.UUID]transaction.Transaction{},
 	}
 }
@@ -35,15 +35,15 @@ func (mr MemoryRepository) SignUp(_ context.Context, aggregate user.Aggregate) (
 	mr.Lock()
 	defer mr.Unlock()
 
-	if mr.user == nil {
-		mr.user = make(map[userKey]user.Aggregate)
+	if mr.users == nil {
+		mr.users = make(map[userKey]user.Aggregate)
 	}
 
 	key := userKey{
 		name: aggregate.User().Email,
 	}
 
-	if _, ok := mr.user[key]; ok {
+	if _, ok := mr.users[key]; ok {
 		return "", apperrors.ErrorResponse{
 			Code:    http.StatusBadRequest,
 			Message: "user already exists",
@@ -51,7 +51,7 @@ func (mr MemoryRepository) SignUp(_ context.Context, aggregate user.Aggregate) (
 		}
 	}
 
-	mr.user[key] = aggregate
+	mr.users[key] = aggregate
 
 	return aggregate.User().Username, nil
 }
@@ -61,8 +61,8 @@ func (mr MemoryRepository) GetUsers(_ context.Context) ([]user.Aggregate, error)
 	defer mr.Unlock()
 
 	var users []user.Aggregate
-	if len(mr.user) > 0 {
-		for _, aggregate := range mr.user {
+	if len(mr.users) > 0 {
+		for _, aggregate := range mr.users {
 			users = append(users, aggregate)
 		}
 	}
@@ -78,7 +78,7 @@ func (mr MemoryRepository) GetUserByEmail(_ context.Context, email string) (user
 		name: email,
 	}
 
-	if user, exist := mr.user[key]; exist {
+	if user, exist := mr.users[key]; exist {
 		return user, nil
 	}
 
@@ -97,13 +97,13 @@ func (mr MemoryRepository) SaveAggregate(_ context.Context, aggregate user.Aggre
 		name: aggregate.User().Email,
 	}
 
-	_, exist := mr.user[key]
+	_, exist := mr.users[key]
 	if !exist {
 		return errors.New("user dont exist")
 
 	}
 
-	mr.user[key] = aggregate
+	mr.users[key] = aggregate
 
 	return nil
 }
