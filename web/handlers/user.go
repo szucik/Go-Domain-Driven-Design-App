@@ -74,7 +74,7 @@ func GetUsers(ctx context.Context, service user.UsersService) func(http.Response
 func GetUser(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
-		user, err := service.GetUserByEmail(ctx, vars["email"])
+		user, err := service.GetUserByName(ctx, vars["username"])
 		if err != nil {
 			fmt.Errorf("%s", err.Error())
 			return
