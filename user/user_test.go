@@ -14,7 +14,7 @@ var (
 	testUser = test.User{
 		Username: "username",
 		Email:    "email@test.com",
-		Password: "12345678",
+		Password: "123456789",
 	}
 )
 
@@ -26,8 +26,8 @@ func TestUser_NewAggregate(t *testing.T) {
 			"address e-mail has incorrect format": {
 				user: testUser.WithEmail("com.invalid-email@test"),
 			},
-			"password has less than 2 characters": {
-				user: testUser.WithPassword(""),
+			"password has less than 8 characters": {
+				user: testUser.WithPassword("12345678"),
 			},
 		}
 

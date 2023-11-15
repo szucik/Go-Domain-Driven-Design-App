@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/google/uuid"
 	"log"
-	"math/rand"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -61,15 +60,14 @@ type UsersOut struct {
 
 func (u Users) SignUp(ctx context.Context, user User) (string, error) {
 	user.Created = time.Now()
-	hash, err := hashPassword(user.Password)
-	if err != nil {
-		return "", fmt.Errorf("service.SignUp failed: %w", err)
-	}
-
-	user.Password = hash
 	user.TokenHash = randStringBytes(15)
 
 	aggregate, err := u.NewAggregate(user)
+	if err != nil {
+		return "", err
+	}
+
+	err = aggregate.hashPassword()
 	if err != nil {
 		return "", err
 	}
@@ -190,14 +188,16 @@ func (u Users) AddTransaction(ctx context.Context, in TransactionIn) (string, er
 }
 
 func (u Users) SignIn(ctx context.Context, auth AuthCredentials) error {
-
-	//u.Database.GetUserByEmail()
-
-	err := comparePasswords(auth.Password, auth.Password)
-
+	aggregate, err := u.Database.GetUserByEmail(ctx, auth.Email)
+	if err != nil {
+		return fmt.Errorf("service.SignIn: %w", err)
+	}
+	user := aggregate.User()
+	err = compareHashAndPassword(user.Password, auth.Password)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -206,10 +206,10 @@ func hashPassword(password string) (string, error) {
 	return string(hash), err
 }
 
-func comparePasswords(hashedPassword, providedPassword string) error {
-	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(providedPassword))
+func compareHashAndPassword(hashedPassword, password string) error {
+	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	if err != nil {
-		return err
+		return fmt.Errorf("compareHashAndPassword: %w", err)
 	}
 
 	return nil
@@ -229,14 +229,4 @@ func transformToUserResponse(aggregate Aggregate) UserResponse {
 		Created:   user.Created,
 		Portfolio: portfolios,
 	}
-}
-
-const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-
-func randStringBytes(n int) string {
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = letterBytes[rand.Intn(len(letterBytes))]
-	}
-	return string(b)
 }

@@ -3,22 +3,26 @@ package mongo
 import (
 	"context"
 	"fmt"
-	"github.com/szucik/trade-helper/user/document"
-
+	"github.com/szucik/trade-helper/portfolio"
 	"github.com/szucik/trade-helper/transaction"
 	"github.com/szucik/trade-helper/user"
+	"github.com/szucik/trade-helper/user/document"
 	"go.mongodb.org/mongo-driver/bson" // Add this line
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// Replace the placeholder with your Atlas connection string
 const uri = "mongodb://127.0.0.1:27017"
 
 type Repository struct {
 	users        *mongo.Collection
 	transactions *mongo.Collection
+}
+
+type Document struct {
+	User       user.User          `bson:"user"`
+	Portfolios []portfolio.Entity `bson:"portfolios"`
 }
 
 func NewDatabase(ctx context.Context) (Repository, error) {
@@ -48,29 +52,33 @@ func (r Repository) SignUp(ctx context.Context, aggregate user.Aggregate) (strin
 }
 
 func (r Repository) GetUserByName(ctx context.Context, userName string) (user.Aggregate, error) {
-	var doc document.Document
+	var result Document
 	filter := bson.M{"username": userName}
-	err := r.users.FindOne(ctx, filter).Decode(&doc)
-	if err != nil {
-		return user.Aggregate{}, fmt.Errorf("GetUserByName failed: %w", err)
-	}
-	aggregate, err := doc.NewAggregate()
+	err := r.users.FindOne(ctx, filter).Decode(&result)
 	if err != nil {
 		return user.Aggregate{}, err
 	}
-	//Todo - create aggregate from bson
+
+	aggregate, err := result.User.NewAggregate()
+	if err != nil {
+		return user.Aggregate{}, err
+	}
 	return aggregate, nil
 }
 
 func (r Repository) GetUserByEmail(ctx context.Context, email string) (user.Aggregate, error) {
-	var result user.User
+	var result Document
 	filter := bson.M{"email": email}
 	err := r.users.FindOne(ctx, filter).Decode(&result)
 	if err != nil {
-		return user.Aggregate{}, fmt.Errorf("GetUserByEmail failed: %w", err)
+		return user.Aggregate{}, err
 	}
-	//Todo - create aggregate  from bson
-	return user.Aggregate{}, nil
+
+	aggregate, err := result.User.NewAggregate()
+	if err != nil {
+		return user.Aggregate{}, err
+	}
+	return aggregate, nil
 }
 
 func (r Repository) GetUsers(ctx context.Context) ([]user.Aggregate, error) {
@@ -118,7 +126,8 @@ func connectWithMongoDB(ctx context.Context) (*mongo.Database, error) {
 
 	fmt.Println("Successfully connected to MongoDB!")
 
-	db := client.Database("tradehelper") // replace with your database name
+	// replace with your database name
+	db := client.Database("example")
 
 	return db, nil
 }

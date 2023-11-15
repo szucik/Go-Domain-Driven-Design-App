@@ -2,7 +2,9 @@ package user
 
 import (
 	"errors"
+	"fmt"
 	"github.com/szucik/trade-helper/portfolio"
+	"math/rand"
 )
 
 type Aggregate struct {
@@ -17,6 +19,16 @@ func (a *Aggregate) User() User {
 
 func (a *Aggregate) Portfolios() []portfolio.Entity {
 	return a.portfolios
+}
+
+func (a *Aggregate) hashPassword() error {
+	hash, err := hashPassword(a.user.Password)
+	if err != nil {
+		return fmt.Errorf("hashPassword failed: %w", err)
+	}
+
+	a.user.Password = hash
+	return nil
 }
 
 func (a *Aggregate) AddPortfolio(entity portfolio.Entity) error {
@@ -42,4 +54,14 @@ func (a *Aggregate) FindPortfolio(name string) (portfolio.Portfolio, error) {
 	}
 
 	return portfolio.Portfolio{}, errors.New("the specified portfolio does not exist")
+}
+
+const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+func randStringBytes(n int) string {
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letterBytes[rand.Intn(len(letterBytes))]
+	}
+	return string(b)
 }
