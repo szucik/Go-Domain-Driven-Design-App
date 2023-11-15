@@ -24,6 +24,11 @@ type MemoryRepository struct {
 	transactions map[string]map[string]map[uuid.UUID]transaction.Transaction
 }
 
+func (mr MemoryRepository) GetUserByName(ctx context.Context, userName string) (user.Aggregate, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func NewDatabase() MemoryRepository {
 	return MemoryRepository{
 		users:        map[userKey]user.Aggregate{},

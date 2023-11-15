@@ -23,7 +23,6 @@ func main() {
 	defer stop()
 
 	logger := log.New(os.Stdout, "logger", log.LstdFlags)
-	//database := fake.NewDatabase()
 	database, err := mongo.NewDatabase(ctx)
 	if err != nil {
 		panic(err)

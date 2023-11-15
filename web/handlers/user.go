@@ -4,9 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
-
 	"github.com/gorilla/mux"
+	"github.com/gorilla/securecookie"
+	"github.com/gorilla/sessions"
+	"net/http"
 
 	"github.com/szucik/trade-helper/user"
 )
@@ -49,7 +50,22 @@ func SignIn(ctx context.Context, service user.UsersService) func(http.ResponseWr
 			return
 		}
 
-		//writeSuccessMessage(rw, []byte(username))
+		key := securecookie.GenerateRandomKey(32)
+		store := sessions.NewCookieStore([]byte(key))
+		session, err := store.Get(r, "session-name")
+		if err != nil {
+			http.Error(rw, err.Error(), 400)
+			return
+		}
+		// Set some session values.
+		session.Values["foo"] = "bar"
+		session.Values[42] = 43
+		// Save it before we write to the response/return from the handler.
+		err = session.Save(r, rw)
+		if err != nil {
+			http.Error(rw, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
