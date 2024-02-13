@@ -53,7 +53,7 @@ func (r Repository) SignUp(ctx context.Context, aggregate user.Aggregate) (strin
 
 func (r Repository) GetUserByName(ctx context.Context, userName string) (user.Aggregate, error) {
 	var result Document
-	filter := bson.M{"username": userName}
+	filter := bson.D{{"user.username", userName}}
 	err := r.users.FindOne(ctx, filter).Decode(&result)
 	if err != nil {
 		return user.Aggregate{}, err
@@ -82,7 +82,8 @@ func (r Repository) GetUserByEmail(ctx context.Context, email string) (user.Aggr
 }
 
 func (r Repository) GetUsers(ctx context.Context) ([]user.Aggregate, error) {
-	cursor, err := r.users.Find(ctx, bson.D{})
+	filter := bson.D{{"users", ""}}
+	cursor, err := r.users.Find(ctx, filter)
 	if err != nil {
 		return nil, fmt.Errorf("GetUsers failed: %w", err)
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/gorilla/sessions"
 	"log"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 
 type UsersService interface {
 	SignUp(ctx context.Context, user User) (string, error)
-	SignIn(ctx context.Context, credentials AuthCredentials) error
+	SignIn(ctx context.Context, credentials AuthCredentials) (username string, err error)
 	GetUserByEmail(ctx context.Context, email string) (UserResponse, error)
 	GetUserByName(ctx context.Context, name string) (UserResponse, error)
 	GetUsers(ctx context.Context) (UsersOut, error)
@@ -38,6 +39,7 @@ type Repository interface {
 type Users struct {
 	Logger       *log.Logger
 	Database     Repository
+	Sessions     sessions.CookieStore
 	NewAggregate func(User) (Aggregate, error)
 }
 
@@ -114,9 +116,9 @@ func (u Users) GetUsers(ctx context.Context) (UsersOut, error) {
 }
 
 func (u Users) AddPortfolio(ctx context.Context, in PortfolioIn) (name string, _ error) {
-	aggregate, err := u.Database.GetUserByEmail(ctx, in.UserName)
+	aggregate, err := u.Database.GetUserByName(ctx, in.UserName)
 	if err != nil {
-		return "", fmt.Errorf("database.GetUserByEmail failed: %w", err)
+		return "", fmt.Errorf("database.GetUserByName failed: %w", err)
 	}
 
 	entity, err := portfolio.Portfolio{
@@ -187,18 +189,17 @@ func (u Users) AddTransaction(ctx context.Context, in TransactionIn) (string, er
 	return id, nil
 }
 
-func (u Users) SignIn(ctx context.Context, auth AuthCredentials) error {
+func (u Users) SignIn(ctx context.Context, auth AuthCredentials) (username string, err error) {
 	aggregate, err := u.Database.GetUserByEmail(ctx, auth.Email)
 	if err != nil {
-		return fmt.Errorf("service.SignIn: %w", err)
+		return username, fmt.Errorf("service.SignIn: %w", err)
 	}
 	user := aggregate.User()
 	err = compareHashAndPassword(user.Password, auth.Password)
 	if err != nil {
-		return err
+		return username, err
 	}
-
-	return nil
+	return user.Username, nil
 }
 
 func hashPassword(password string) (string, error) {

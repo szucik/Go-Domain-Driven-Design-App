@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/szucik/trade-helper/app"
 	"log"
 	"net/http"
 	"os"
@@ -35,7 +36,7 @@ func main() {
 	}
 
 	sm := mux.NewRouter()
-
+	sm.Use(app.MiddlewareIsAuth)
 	// Post
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/signup", handlers.SignUp(ctx, users))
