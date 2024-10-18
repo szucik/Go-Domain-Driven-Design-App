@@ -39,11 +39,15 @@ func NewDatabase(ctx context.Context) (Repository, error) {
 
 func (r Repository) SignUp(ctx context.Context, aggregate user.Aggregate) (string, error) {
 	doc := document.NewDocument(aggregate)
-	filter := bson.M{"email": doc.User.Email}
-	update := bson.M{"$setOnInsert": doc}
+	//filter := bson.M{"email": doc.User.Email}
+	//update := bson.M{"$setOnInsert": doc}
 
-	updateOptions := options.Update().SetUpsert(true)
-	_, err := r.users.UpdateOne(ctx, filter, update, updateOptions)
+	newOne := bson.D{
+		{"email", doc.User.Email},
+	}
+
+	//updateOptions := options.Update().SetUpsert(true)
+	_, err := r.users.InsertOne(ctx, newOne)
 	if err != nil {
 		return "", err
 	}

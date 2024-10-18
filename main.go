@@ -2,21 +2,19 @@ package main
 
 import (
 	"context"
-	"github.com/szucik/trade-helper/app"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"time"
 
-	"github.com/szucik/trade-helper/database/mongo"
-
-	"github.com/szucik/trade-helper/web/handlers"
-
-	"github.com/szucik/trade-helper/user"
-
 	gohandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+
+	"github.com/szucik/trade-helper/app"
+	"github.com/szucik/trade-helper/database/mongo"
+	"github.com/szucik/trade-helper/user"
+	"github.com/szucik/trade-helper/web/handlers"
 )
 
 func main() {
