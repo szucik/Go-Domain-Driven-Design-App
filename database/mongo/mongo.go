@@ -3,6 +3,8 @@ package mongo
 import (
 	"context"
 	"fmt"
+	"os"
+
 	"github.com/szucik/trade-helper/portfolio"
 	"github.com/szucik/trade-helper/transaction"
 	"github.com/szucik/trade-helper/user"
@@ -11,7 +13,6 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
-	"os"
 )
 
 const uri = "mongodb://127.0.0.1:27017/"
@@ -66,7 +67,8 @@ func (r Repository) GetUserByName(ctx context.Context, userName string) (user.Ag
 
 func (r Repository) GetUserByEmail(ctx context.Context, email string) (user.Aggregate, error) {
 	var result Document
-	filter := bson.M{"email": email}
+	filter := bson.D{{Key: "user.email", Value: email}}
+
 	err := r.users.FindOne(ctx, filter).Decode(&result)
 	if err != nil {
 		return user.Aggregate{}, err
