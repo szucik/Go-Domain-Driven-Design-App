@@ -8,10 +8,11 @@ import (
 	"os/signal"
 	"time"
 
+	"github.com/szucik/trade-helper/web"
+
 	gohandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 
-	"github.com/szucik/trade-helper/app"
 	"github.com/szucik/trade-helper/database/mongo"
 	"github.com/szucik/trade-helper/user"
 	"github.com/szucik/trade-helper/web/handlers"
@@ -34,7 +35,8 @@ func main() {
 	}
 
 	sm := mux.NewRouter()
-	sm.Use(app.MiddlewareIsAuth)
+	sm.Use(web.MiddlewareIsAuth)
+
 	// Post
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/signup", handlers.SignUp(users))

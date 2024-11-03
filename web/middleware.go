@@ -1,9 +1,10 @@
-package app
+package web
 
 import (
+	"net/http"
+
 	"github.com/szucik/trade-helper/apperrors"
 	_ "github.com/szucik/trade-helper/portfolio"
-	"net/http"
 )
 
 func MiddlewareIsAuth(next http.Handler) http.Handler {
