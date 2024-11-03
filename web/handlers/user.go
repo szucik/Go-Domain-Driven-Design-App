@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
@@ -13,7 +12,7 @@ import (
 
 var store = sessions.NewCookieStore([]byte("something-very-secret"))
 
-func SignUp(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func SignUp(service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var user user.User
 
@@ -23,7 +22,7 @@ func SignUp(ctx context.Context, service user.UsersService) func(http.ResponseWr
 			return
 		}
 
-		username, err := service.SignUp(ctx, user)
+		username, err := service.SignUp(r.Context(), user)
 
 		if err != nil {
 			//TODO - handle errors, or logger
@@ -35,7 +34,7 @@ func SignUp(ctx context.Context, service user.UsersService) func(http.ResponseWr
 	}
 }
 
-func SignIn(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func SignIn(service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var credentials user.AuthCredentials
 		err := json.NewDecoder(r.Body).Decode(&credentials)
@@ -44,7 +43,7 @@ func SignIn(ctx context.Context, service user.UsersService) func(http.ResponseWr
 			return
 		}
 
-		username, err := service.SignIn(ctx, credentials)
+		username, err := service.SignIn(r.Context(), credentials)
 		if err != nil {
 			http.Error(rw, err.Error(), 400)
 			return
@@ -65,9 +64,9 @@ func SignIn(ctx context.Context, service user.UsersService) func(http.ResponseWr
 	}
 }
 
-func GetUsers(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func GetUsers(service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		users, err := service.GetUsers(ctx)
+		users, err := service.GetUsers(r.Context())
 		if err != nil {
 			http.Error(rw, err.Error(), 400)
 			return
@@ -83,10 +82,10 @@ func GetUsers(ctx context.Context, service user.UsersService) func(http.Response
 	}
 }
 
-func GetUser(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func GetUser(service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
-		user, err := service.GetUserByName(ctx, vars["username"])
+		user, err := service.GetUserByName(r.Context(), vars["username"])
 		if err != nil {
 			fmt.Errorf("%s", err.Error())
 			return

@@ -37,8 +37,8 @@ func main() {
 	sm.Use(app.MiddlewareIsAuth)
 	// Post
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
-	postRouter.HandleFunc("/signup", handlers.SignUp(ctx, users))
-	postRouter.HandleFunc("/signin", handlers.SignIn(ctx, users))
+	postRouter.HandleFunc("/signup", handlers.SignUp(users))
+	postRouter.HandleFunc("/signin", handlers.SignIn(users))
 	postRouter.HandleFunc(
 		"/users/{username:[a-z, A-Z, 0-9]+}/portfolio", handlers.AddPortfolio(ctx, users))
 	postRouter.HandleFunc(
@@ -49,9 +49,9 @@ func main() {
 
 	// Users
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
-	getRouter.HandleFunc("/users", handlers.GetUsers(ctx, users))
-	getRouter.HandleFunc("/users/{username:[a-z, A-Z, 0-9]+}", handlers.GetUser(ctx, users))
-	//getRouter.HandleFunc("/users/{email:[a-z, A-Z, 0-9]+}", handlers.GetUser(ctx, users))
+	getRouter.HandleFunc("/users", handlers.GetUsers(users))
+	getRouter.HandleFunc("/users/{username:[a-z, A-Z, 0-9]+}", handlers.GetUser(users))
+	//getRouter.HandleFunc("/users/{email:[a-z, A-Z, 0-9]+}", handlers.GetUser( users))
 
 	// putRouter := sm.Methods(http.MethodPut).Subrouter()
 	// putRouter.HandleFunc("/users/{id:[0-9]+}", users.UpdateUser)
