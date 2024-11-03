@@ -27,7 +27,7 @@ func TestUser_NewAggregate(t *testing.T) {
 				user: testUser.WithEmail("com.invalid-email@test"),
 			},
 			"password has less than 8 characters": {
-				user: testUser.WithPassword("12345678"),
+				user: testUser.WithPassword("1234567"),
 			},
 		}
 

@@ -7,13 +7,14 @@ import (
 	"github.com/szucik/trade-helper/transaction"
 	"github.com/szucik/trade-helper/user"
 	"github.com/szucik/trade-helper/user/document"
-	"go.mongodb.org/mongo-driver/bson" // Add this line
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	"os"
 )
 
-const uri = "mongodb://127.0.0.1:27017"
+const uri = "mongodb://127.0.0.1:27017/"
 
 type Repository struct {
 	users        *mongo.Collection
@@ -38,12 +39,9 @@ func NewDatabase(ctx context.Context) (Repository, error) {
 }
 
 func (r Repository) SignUp(ctx context.Context, aggregate user.Aggregate) (string, error) {
-	doc := document.NewDocument(aggregate)
-	filter := bson.M{"email": doc.User.Email}
-	update := bson.M{"$setOnInsert": doc}
+	document := document.NewDocument(aggregate)
 
-	updateOptions := options.Update().SetUpsert(true)
-	_, err := r.users.UpdateOne(ctx, filter, update, updateOptions)
+	_, err := r.users.InsertOne(ctx, document)
 	if err != nil {
 		return "", err
 	}
@@ -125,9 +123,8 @@ func connectWithMongoDB(ctx context.Context) (*mongo.Database, error) {
 	}
 
 	fmt.Println("Successfully connected to MongoDB!")
-
-	// replace with your database name
-	db := client.Database("example")
+	dbName := os.Getenv("MONGO_DB_NAME")
+	db := client.Database(dbName)
 
 	return db, nil
 }

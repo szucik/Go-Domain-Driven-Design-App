@@ -1,8 +1,6 @@
 package apperrors
 
 import (
-	"fmt"
-
 	"net/http"
 
 	"encoding/json"
@@ -28,20 +26,11 @@ func (e ErrorResponse) JSONError(w http.ResponseWriter) {
 	json.NewEncoder(w).Encode(e)
 }
 
-func BadRequestError(message, errorType string) ErrorResponse {
+func Error(message, errorType string, code int) ErrorResponse {
 	return ErrorResponse{
 		TraceId: uuid.New().String(),
-		Code:    400,
+		Code:    code,
 		Message: message,
 		Type:    errorType,
-	}
-}
-
-func UnprocessableEntityError(field string) ErrorResponse {
-	return ErrorResponse{
-		TraceId: uuid.New().String(),
-		Code:    422,
-		Message: fmt.Sprintf("A required parameter for the specified action is not supplied: %s", field),
-		Type:    "MissingParameter",
 	}
 }

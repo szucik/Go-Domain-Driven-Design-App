@@ -32,22 +32,25 @@ type UserResponse struct {
 func (u User) NewAggregate() (Aggregate, error) {
 	switch {
 	case !isLengthValid(u.Username, 2):
-		return Aggregate{}, apperrors.BadRequestError(
+		return Aggregate{}, apperrors.Error(
 			"User name is to short",
 			"UserParamsValidation",
+			400,
 		)
 
 	case !isEmailValid(u.Email):
-		return Aggregate{}, apperrors.BadRequestError(
+		return Aggregate{}, apperrors.Error(
 			"Invalid user email",
 			"UserParamsValidation",
+			400,
 		)
 
 	case len(u.Password) < 8:
 		return Aggregate{},
-			apperrors.BadRequestError(
+			apperrors.Error(
 				"Password is to short, it should be longer than 8 characters",
 				"UserParamsValidation",
+				400,
 			)
 	}
 

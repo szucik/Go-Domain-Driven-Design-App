@@ -1,18 +1,18 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/gorilla/mux"
-	"github.com/gorilla/securecookie"
 	"github.com/gorilla/sessions"
 	"net/http"
 
 	"github.com/szucik/trade-helper/user"
 )
 
-func SignUp(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
+var store = sessions.NewCookieStore([]byte("something-very-secret"))
+
+func SignUp(service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var user user.User
 
@@ -22,7 +22,7 @@ func SignUp(ctx context.Context, service user.UsersService) func(http.ResponseWr
 			return
 		}
 
-		username, err := service.SignUp(ctx, user)
+		username, err := service.SignUp(r.Context(), user)
 
 		if err != nil {
 			//TODO - handle errors, or logger
@@ -34,44 +34,39 @@ func SignUp(ctx context.Context, service user.UsersService) func(http.ResponseWr
 	}
 }
 
-func SignIn(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func SignIn(service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var credentials user.AuthCredentials
-
 		err := json.NewDecoder(r.Body).Decode(&credentials)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusBadRequest)
 			return
 		}
 
-		err = service.SignIn(ctx, credentials)
+		username, err := service.SignIn(r.Context(), credentials)
 		if err != nil {
 			http.Error(rw, err.Error(), 400)
 			return
+		}
+		session, _ := store.Get(r, "X-Auth")
+		session.Options = &sessions.Options{
+			Path:     "/",
+			MaxAge:   86400 * 7,
+			HttpOnly: true,
 		}
 
-		key := securecookie.GenerateRandomKey(32)
-		store := sessions.NewCookieStore([]byte(key))
-		session, err := store.Get(r, "session-name")
-		if err != nil {
-			http.Error(rw, err.Error(), 400)
-			return
-		}
-		// Set some session values.
-		session.Values["foo"] = "bar"
-		session.Values[42] = 43
-		// Save it before we write to the response/return from the handler.
 		err = session.Save(r, rw)
 		if err != nil {
 			http.Error(rw, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		writeSuccessMessage(rw, []byte(username))
 	}
 }
 
-func GetUsers(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func GetUsers(service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
-		users, err := service.GetUsers(ctx)
+		users, err := service.GetUsers(r.Context())
 		if err != nil {
 			http.Error(rw, err.Error(), 400)
 			return
@@ -87,10 +82,10 @@ func GetUsers(ctx context.Context, service user.UsersService) func(http.Response
 	}
 }
 
-func GetUser(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func GetUser(service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
-		user, err := service.GetUserByName(ctx, vars["username"])
+		user, err := service.GetUserByName(r.Context(), vars["username"])
 		if err != nil {
 			fmt.Errorf("%s", err.Error())
 			return
