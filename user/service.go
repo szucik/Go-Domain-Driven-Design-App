@@ -3,11 +3,11 @@ package user
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
-	"github.com/gorilla/sessions"
 	"log"
 	"time"
 
+	"github.com/google/uuid"
+	"github.com/gorilla/sessions"
 	"github.com/shopspring/decimal"
 	"golang.org/x/crypto/bcrypt"
 
@@ -20,20 +20,24 @@ type UsersService interface {
 	SignIn(ctx context.Context, credentials AuthCredentials) (username string, err error)
 	GetUserByEmail(ctx context.Context, email string) (UserResponse, error)
 	GetUserByName(ctx context.Context, name string) (UserResponse, error)
-	GetUsers(ctx context.Context) (UsersOut, error)
+	GetUsers(ctx context.Context, p PaginationIn) (UsersOut, error)
+	GetTransactions(ctx context.Context, username, portfolioName string) (TransactionsOut, error)
 	AddPortfolio(ctx context.Context, in PortfolioIn) (string, error)
 	AddTransaction(ctx context.Context, in TransactionIn) (string, error)
+	UpdateUser(ctx context.Context, currentUsername string, in UpdateUserIn) (string, error)
+	DeleteUser(ctx context.Context, username string) error
 }
 
 type Repository interface {
-	// GetUserByEmail Dashboard(ctx context.Context) (Aggregate, error)
-	// SignIn(ctx context.Context) (Aggregate, error)
 	GetUserByEmail(ctx context.Context, email string) (Aggregate, error)
 	GetUserByName(ctx context.Context, userName string) (Aggregate, error)
-	GetUsers(ctx context.Context) ([]Aggregate, error)
+	GetUsers(ctx context.Context, p PaginationIn) ([]Aggregate, error)
 	SignUp(ctx context.Context, aggregate Aggregate) (string, error)
 	SaveAggregate(ctx context.Context, aggregate Aggregate) error
-	AddTransaction(ctx context.Context, transaction transaction.ValueObject) (string, error)
+	AddTransaction(ctx context.Context, t transaction.ValueObject) (string, error)
+	GetTransactions(ctx context.Context, username, portfolioName string) ([]transaction.ValueObject, error)
+	UpdateUser(ctx context.Context, currentUsername string, aggregate Aggregate) error
+	DeleteUser(ctx context.Context, username string) error
 }
 
 type Users struct {
@@ -54,10 +58,14 @@ type TransactionIn struct {
 	Symbol        string `json:"symbol"`
 	Amount        string `json:"amount"`
 	Quantity      string `json:"quantity"`
+	Type          string `json:"type"`
 }
 
 type UsersOut struct {
-	Users []UserResponse
+	Users []UserResponse `json:"users"`
+	Total int            `json:"total"`
+	Page  int            `json:"page"`
+	Limit int            `json:"limit"`
 }
 
 func (u Users) SignUp(ctx context.Context, user User) (string, error) {
@@ -69,16 +77,17 @@ func (u Users) SignUp(ctx context.Context, user User) (string, error) {
 		return "", err
 	}
 
-	err = aggregate.hashPassword()
-	if err != nil {
+	if err = aggregate.hashPassword(); err != nil {
 		return "", err
 	}
 
 	id, err := u.Database.SignUp(ctx, aggregate)
 	if err != nil {
+		u.Logger.Printf("SignUp failed for %s: %v", user.Email, err)
 		return "", fmt.Errorf("database.SignUp failed: %w", err)
 	}
 
+	u.Logger.Printf("SignUp: new user %s", user.Username)
 	return id, nil
 }
 
@@ -87,7 +96,6 @@ func (u Users) GetUserByName(ctx context.Context, username string) (UserResponse
 	if err != nil {
 		return UserResponse{}, fmt.Errorf("database.GetUserByName failed: %w", err)
 	}
-
 	return transformToUserResponse(aggregate), nil
 }
 
@@ -96,23 +104,41 @@ func (u Users) GetUserByEmail(ctx context.Context, email string) (UserResponse, 
 	if err != nil {
 		return UserResponse{}, fmt.Errorf("database.GetUserByEmail failed: %w", err)
 	}
-
 	return transformToUserResponse(aggregate), nil
 }
 
-func (u Users) GetUsers(ctx context.Context) (UsersOut, error) {
-	var response UsersOut
-
-	users, err := u.Database.GetUsers(ctx)
+func (u Users) GetUsers(ctx context.Context, p PaginationIn) (UsersOut, error) {
+	aggregates, err := u.Database.GetUsers(ctx, p)
 	if err != nil {
 		return UsersOut{}, fmt.Errorf("database.GetUsers failed: %w", err)
 	}
 
-	for _, user := range users {
-		response.Users = append(response.Users, transformToUserResponse(user))
+	out := UsersOut{Page: p.Page, Limit: p.Limit, Total: len(aggregates)}
+	for _, a := range aggregates {
+		out.Users = append(out.Users, transformToUserResponse(a))
+	}
+	return out, nil
+}
+
+func (u Users) GetTransactions(ctx context.Context, username, portfolioName string) (TransactionsOut, error) {
+	vos, err := u.Database.GetTransactions(ctx, username, portfolioName)
+	if err != nil {
+		return TransactionsOut{}, fmt.Errorf("database.GetTransactions failed: %w", err)
 	}
 
-	return response, nil
+	var out TransactionsOut
+	for _, vo := range vos {
+		t := vo.Transaction()
+		out.Transactions = append(out.Transactions, TransactionResponse{
+			ID:       t.ID.String(),
+			Symbol:   t.Symbol,
+			Type:     t.Type,
+			Quantity: t.Quantity,
+			Price:    t.Price,
+			Created:  t.Created,
+		})
+	}
+	return out, nil
 }
 
 func (u Users) AddPortfolio(ctx context.Context, in PortfolioIn) (name string, _ error) {
@@ -129,50 +155,51 @@ func (u Users) AddPortfolio(ctx context.Context, in PortfolioIn) (name string, _
 		ProfitLossDay:   decimal.NewFromInt(0),
 		Created:         time.Now(),
 	}.NewPortfolio()
-
 	if err != nil {
 		return "", fmt.Errorf("portfolio.NewPortfolio failed: %w", err)
 	}
 
-	err = aggregate.AddPortfolio(entity)
-	if err != nil {
+	if err = aggregate.AddPortfolio(entity); err != nil {
 		return "", fmt.Errorf("aggregate.AddPortfolio failed: %w", err)
 	}
 
-	err = u.Database.SaveAggregate(ctx, aggregate)
-	if err != nil {
+	if err = u.Database.SaveAggregate(ctx, aggregate); err != nil {
+		u.Logger.Printf("AddPortfolio SaveAggregate failed for %s: %v", in.UserName, err)
 		return "", fmt.Errorf("aggregate.SaveAggregate failed: %w", err)
 	}
 
+	u.Logger.Printf("AddPortfolio: user %s added portfolio %s", in.UserName, in.Name)
 	return entity.Portfolio().Name, nil
 }
 
 func (u Users) AddTransaction(ctx context.Context, in TransactionIn) (string, error) {
-	aggregate, err := u.Database.GetUserByEmail(ctx, in.UserName)
+	aggregate, err := u.Database.GetUserByName(ctx, in.UserName)
 	if err != nil {
 		return "", fmt.Errorf("service.AddTransaction: %w", err)
 	}
 
-	_, err = aggregate.FindPortfolio(in.PortfolioName)
-	if err != nil {
+	if _, err = aggregate.FindPortfolio(in.PortfolioName); err != nil {
 		return "", fmt.Errorf("service.AddTransaction: %w", err)
 	}
 
 	quantity, err := decimal.NewFromString(in.Quantity)
 	if err != nil {
-		return "", fmt.Errorf("service.AddTransaction: %w", err)
+		return "", fmt.Errorf("service.AddTransaction invalid quantity: %w", err)
 	}
 
 	price, err := decimal.NewFromString(in.Amount)
 	if err != nil {
-		return "", fmt.Errorf("service.AddTransaction: %w", err)
+		return "", fmt.Errorf("service.AddTransaction invalid amount: %w", err)
 	}
+
+	txType := parseTransactionType(in.Type)
 
 	t, err := transaction.Transaction{
 		ID:            uuid.New(),
 		UserName:      in.UserName,
 		PortfolioName: in.PortfolioName,
 		Symbol:        in.Symbol,
+		Type:          txType,
 		Created:       time.Now(),
 		Quantity:      quantity,
 		Price:         price,
@@ -182,24 +209,94 @@ func (u Users) AddTransaction(ctx context.Context, in TransactionIn) (string, er
 	}
 
 	id, err := u.Database.AddTransaction(ctx, t)
-
 	if err != nil {
+		u.Logger.Printf("AddTransaction DB failed for %s/%s: %v", in.UserName, in.PortfolioName, err)
 		return "", fmt.Errorf("Database.AddTransaction: %w", err)
 	}
+
+	costDelta := quantity.Mul(price)
+	if txType == transaction.Sell {
+		costDelta = costDelta.Neg()
+	}
+
+	if err := aggregate.UpdatePortfolioTotalCost(in.PortfolioName, costDelta); err != nil {
+		return "", fmt.Errorf("service.AddTransaction: %w", err)
+	}
+
+	if err := u.Database.SaveAggregate(ctx, aggregate); err != nil {
+		u.Logger.Printf("AddTransaction SaveAggregate failed for %s: %v", in.UserName, err)
+		return "", fmt.Errorf("service.AddTransaction SaveAggregate: %w", err)
+	}
+
+	u.Logger.Printf("AddTransaction: %s %s %s x%s", txType, in.Symbol, in.PortfolioName, in.Quantity)
 	return id, nil
 }
 
-func (u Users) SignIn(ctx context.Context, auth AuthCredentials) (username string, err error) {
+func (u Users) SignIn(ctx context.Context, auth AuthCredentials) (string, error) {
 	aggregate, err := u.Database.GetUserByEmail(ctx, auth.Email)
 	if err != nil {
-		return username, fmt.Errorf("service.SignIn: %w", err)
+		return "", fmt.Errorf("service.SignIn: %w", err)
 	}
-	user := aggregate.User()
-	err = compareHashAndPassword(user.Password, auth.Password)
+	usr := aggregate.User()
+	if err = compareHashAndPassword(usr.Password, auth.Password); err != nil {
+		return "", err
+	}
+	u.Logger.Printf("SignIn: user %s authenticated", usr.Username)
+	return usr.Username, nil
+}
+
+func (u Users) UpdateUser(ctx context.Context, currentUsername string, in UpdateUserIn) (string, error) {
+	aggregate, err := u.Database.GetUserByName(ctx, currentUsername)
 	if err != nil {
-		return username, err
+		return "", fmt.Errorf("service.UpdateUser: %w", err)
 	}
-	return user.Username, nil
+
+	current := aggregate.User()
+	if in.Username != "" {
+		current.Username = in.Username
+	}
+	if in.Email != "" {
+		current.Email = in.Email
+	}
+	if in.Password != "" {
+		current.Password = in.Password
+	}
+	current.Updated = time.Now()
+
+	updated, err := u.NewAggregate(current)
+	if err != nil {
+		return "", fmt.Errorf("service.UpdateUser: %w", err)
+	}
+
+	if in.Password != "" {
+		if err := updated.hashPassword(); err != nil {
+			return "", fmt.Errorf("service.UpdateUser: %w", err)
+		}
+	}
+
+	if err := u.Database.UpdateUser(ctx, currentUsername, updated); err != nil {
+		u.Logger.Printf("UpdateUser failed for %s: %v", currentUsername, err)
+		return "", fmt.Errorf("service.UpdateUser: %w", err)
+	}
+
+	u.Logger.Printf("UpdateUser: %s updated", currentUsername)
+	return updated.User().Username, nil
+}
+
+func (u Users) DeleteUser(ctx context.Context, username string) error {
+	if err := u.Database.DeleteUser(ctx, username); err != nil {
+		u.Logger.Printf("DeleteUser failed for %s: %v", username, err)
+		return fmt.Errorf("service.DeleteUser: %w", err)
+	}
+	u.Logger.Printf("DeleteUser: user %s deleted", username)
+	return nil
+}
+
+func parseTransactionType(s string) transaction.TransactionType {
+	if s == "sell" {
+		return transaction.Sell
+	}
+	return transaction.Buy
 }
 
 func hashPassword(password string) (string, error) {
@@ -208,16 +305,14 @@ func hashPassword(password string) (string, error) {
 }
 
 func compareHashAndPassword(hashedPassword, password string) error {
-	err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
-	if err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
 		return fmt.Errorf("compareHashAndPassword: %w", err)
 	}
-
 	return nil
 }
 
 func transformToUserResponse(aggregate Aggregate) UserResponse {
-	user := aggregate.User()
+	usr := aggregate.User()
 
 	var portfolios []portfolio.Portfolio
 	for _, entity := range aggregate.Portfolios() {
@@ -225,9 +320,9 @@ func transformToUserResponse(aggregate Aggregate) UserResponse {
 	}
 
 	return UserResponse{
-		Username:  user.Username,
-		Email:     user.Email,
-		Created:   user.Created,
+		Username:  usr.Username,
+		Email:     usr.Email,
+		Created:   usr.Created,
 		Portfolio: portfolios,
 	}
 }

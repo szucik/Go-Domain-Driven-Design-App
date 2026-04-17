@@ -12,14 +12,29 @@ import (
 
 var emptyFieldErr = errors.New("this field must not be empty")
 
+type TransactionType int
+
+const (
+	Buy  TransactionType = iota
+	Sell TransactionType = iota
+)
+
+func (t TransactionType) String() string {
+	if t == Sell {
+		return "sell"
+	}
+	return "buy"
+}
+
 type Transaction struct {
-	ID            uuid.UUID       `json:"id"`
-	UserName      string          `json:"user_id" validate:"required"`
-	PortfolioName string          `json:"portfolio_id" validate:"required"`
-	Symbol        string          `json:"symbol" validate:"required"`
-	Quantity      decimal.Decimal `json:"quantity" validate:"required"`
-	Price         decimal.Decimal `json:"price" validate:"required"`
-	Created       time.Time       `json:"created"`
+	ID            uuid.UUID       `json:"id"           bson:"id"`
+	UserName      string          `json:"user_id"      bson:"username"`
+	PortfolioName string          `json:"portfolio_id" bson:"portfolio_name"`
+	Symbol        string          `json:"symbol"       bson:"symbol"`
+	Type          TransactionType `json:"type"         bson:"type"`
+	Quantity      decimal.Decimal `json:"quantity"     bson:"quantity"`
+	Price         decimal.Decimal `json:"price"        bson:"price"`
+	Created       time.Time       `json:"created"      bson:"created"`
 }
 
 type ValueObject struct {

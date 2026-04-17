@@ -1,11 +1,13 @@
 package user
 
 import (
-	"github.com/szucik/trade-helper/apperrors"
 	"regexp"
 	"time"
 
+	"github.com/shopspring/decimal"
+	"github.com/szucik/trade-helper/apperrors"
 	"github.com/szucik/trade-helper/portfolio"
+	"github.com/szucik/trade-helper/transaction"
 )
 
 type User struct {
@@ -18,15 +20,39 @@ type User struct {
 }
 
 type AuthCredentials struct {
-	Email    string `json:"email" validate:"required"`
+	Email    string `json:"email"    validate:"required"`
 	Password string `json:"password" validate:"required"`
 }
 
+type UpdateUserIn struct {
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 type UserResponse struct {
-	Username  string                `json:"username" validate:"required"`
-	Email     string                `json:"email" validate:"required"`
-	Portfolio []portfolio.Portfolio `json:"portfolios" validate:"required"`
+	Username  string                `json:"username"`
+	Email     string                `json:"email"`
+	Portfolio []portfolio.Portfolio `json:"portfolios"`
 	Created   time.Time             `json:"created"`
+}
+
+type TransactionResponse struct {
+	ID            string                   `json:"id"`
+	Symbol        string                   `json:"symbol"`
+	Type          transaction.TransactionType `json:"type"`
+	Quantity      decimal.Decimal          `json:"quantity"`
+	Price         decimal.Decimal          `json:"price"`
+	Created       time.Time                `json:"created"`
+}
+
+type TransactionsOut struct {
+	Transactions []TransactionResponse `json:"transactions"`
+}
+
+type PaginationIn struct {
+	Page  int
+	Limit int
 }
 
 func (u User) NewAggregate() (Aggregate, error) {
@@ -60,10 +86,7 @@ func (u User) NewAggregate() (Aggregate, error) {
 }
 
 func isLengthValid(value string, length int) bool {
-	if len(value) < length {
-		return false
-	}
-	return true
+	return len(value) >= length
 }
 
 func isEmailValid(email string) bool {

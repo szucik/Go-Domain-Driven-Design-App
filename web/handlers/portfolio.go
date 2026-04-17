@@ -1,30 +1,33 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/mux"
 
+	"github.com/szucik/trade-helper/apperrors"
 	"github.com/szucik/trade-helper/user"
 )
 
-func AddPortfolio(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func AddPortfolio(service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var p user.PortfolioIn
-		username := mux.Vars(r)["username"]
 
-		err := json.NewDecoder(r.Body).Decode(&p)
-		if err != nil {
-			http.Error(rw, err.Error(), http.StatusBadRequest)
+		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+			writeError(rw, apperrors.Error(err.Error(), "BadRequest", http.StatusBadRequest))
 			return
 		}
 
-		p.UserName = username
-		name, err := service.AddPortfolio(ctx, p)
+		if p.Name == "" {
+			writeError(rw, apperrors.Error("portfolio name is required", "ValidationError", http.StatusBadRequest))
+			return
+		}
+
+		p.UserName = mux.Vars(r)["username"]
+		name, err := service.AddPortfolio(r.Context(), p)
 		if err != nil {
-			http.Error(rw, err.Error(), http.StatusBadRequest)
+			writeError(rw, err)
 			return
 		}
 
@@ -32,26 +35,52 @@ func AddPortfolio(ctx context.Context, service user.UsersService) func(http.Resp
 	}
 }
 
-func AddTransaction(ctx context.Context, service user.UsersService) func(http.ResponseWriter, *http.Request) {
+func AddTransaction(service user.UsersService) func(http.ResponseWriter, *http.Request) {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var p user.TransactionIn
 		vars := mux.Vars(r)
 
-		err := json.NewDecoder(r.Body).Decode(&p)
-		if err != nil {
-			http.Error(rw, err.Error(), http.StatusBadRequest)
+		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+			writeError(rw, apperrors.Error(err.Error(), "BadRequest", http.StatusBadRequest))
+			return
+		}
+
+		if p.Symbol == "" || p.Amount == "" || p.Quantity == "" {
+			writeError(rw, apperrors.Error("symbol, amount and quantity are required", "ValidationError", http.StatusBadRequest))
 			return
 		}
 
 		p.UserName = vars["username"]
 		p.PortfolioName = vars["name"]
 
-		result, err := service.AddTransaction(ctx, p)
+		result, err := service.AddTransaction(r.Context(), p)
 		if err != nil {
-			http.Error(rw, err.Error(), http.StatusBadRequest)
+			writeError(rw, err)
 			return
 		}
 
 		writeSuccessMessage(rw, []byte(result))
+	}
+}
+
+func GetTransactions(service user.UsersService) func(http.ResponseWriter, *http.Request) {
+	return func(rw http.ResponseWriter, r *http.Request) {
+		vars := mux.Vars(r)
+		username := vars["username"]
+		portfolioName := vars["name"]
+
+		out, err := service.GetTransactions(r.Context(), username, portfolioName)
+		if err != nil {
+			writeError(rw, err)
+			return
+		}
+
+		result, err := json.Marshal(out)
+		if err != nil {
+			writeError(rw, apperrors.Error(err.Error(), "MarshalError", http.StatusInternalServerError))
+			return
+		}
+
+		writeSuccessMessage(rw, result)
 	}
 }

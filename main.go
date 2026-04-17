@@ -6,27 +6,34 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
-
-	"github.com/szucik/trade-helper/web"
 
 	gohandlers "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 
 	"github.com/szucik/trade-helper/database/mongo"
 	"github.com/szucik/trade-helper/user"
+	"github.com/szucik/trade-helper/web"
 	"github.com/szucik/trade-helper/web/handlers"
 )
 
 func main() {
-	ctx, stop := context.WithTimeout(context.Background(), 30*time.Second)
-	defer stop()
+	connectCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
-	logger := log.New(os.Stdout, "logger", log.LstdFlags)
-	database, err := mongo.NewDatabase(ctx)
+	logger := log.New(os.Stdout, "logger ", log.LstdFlags)
+	database, err := mongo.NewDatabase(connectCtx)
 	if err != nil {
 		panic(err)
 	}
+
+	sessionSecret := os.Getenv("SESSION_SECRET")
+	if sessionSecret == "" {
+		log.Fatal("SESSION_SECRET environment variable is required")
+	}
+	store := sessions.NewCookieStore([]byte(sessionSecret))
 
 	users := user.Users{
 		Logger:       logger,
@@ -35,34 +42,25 @@ func main() {
 	}
 
 	sm := mux.NewRouter()
-	sm.Use(web.MiddlewareIsAuth)
+	sm.Use(web.MiddlewareIsAuth(store))
 
-	// Post
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/signup", handlers.SignUp(users))
-	postRouter.HandleFunc("/signin", handlers.SignIn(users))
-	postRouter.HandleFunc(
-		"/users/{username:[a-z, A-Z, 0-9]+}/portfolio", handlers.AddPortfolio(ctx, users))
-	postRouter.HandleFunc(
-		"/users/{username:[a-z, A-Z, 0-9]+}/portfolio/{name:[a-z, A-Z, 0-9]+}/transactions",
-		handlers.AddTransaction(ctx, users),
-	)
-	// postRouter.Use(users.MiddlewareUserValid)
+	postRouter.HandleFunc("/signin", handlers.SignIn(users, store))
+	postRouter.HandleFunc("/users/{username:[a-zA-Z0-9]+}/portfolio", handlers.AddPortfolio(users))
+	postRouter.HandleFunc("/users/{username:[a-zA-Z0-9]+}/portfolio/{name:[a-zA-Z0-9]+}/transactions", handlers.AddTransaction(users))
 
-	// Users
 	getRouter := sm.Methods(http.MethodGet).Subrouter()
 	getRouter.HandleFunc("/users", handlers.GetUsers(users))
-	getRouter.HandleFunc("/users/{username:[a-z, A-Z, 0-9]+}", handlers.GetUser(users))
-	//getRouter.HandleFunc("/users/{email:[a-z, A-Z, 0-9]+}", handlers.GetUser( users))
+	getRouter.HandleFunc("/users/{username:[a-zA-Z0-9]+}", handlers.GetUser(users))
+	getRouter.HandleFunc("/users/{username:[a-zA-Z0-9]+}/portfolio/{name:[a-zA-Z0-9]+}/transactions", handlers.GetTransactions(users))
 
-	// putRouter := sm.Methods(http.MethodPut).Subrouter()
-	// putRouter.HandleFunc("/users/{id:[0-9]+}", users.UpdateUser)
-	// putRouter.Use(users.MiddlewareUserValid)
+	putRouter := sm.Methods(http.MethodPut).Subrouter()
+	putRouter.HandleFunc("/users/{username:[a-zA-Z0-9]+}", handlers.UpdateUser(users))
 
-	// deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
-	// deleteRouter.HandleFunc("/users/{id:[0-9]+}", users.DeleteUser)
+	deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
+	deleteRouter.HandleFunc("/users/{username:[a-zA-Z0-9]+}", handlers.DeleteUser(users))
 
-	// CORS
 	ch := gohandlers.CORS(gohandlers.AllowedOrigins([]string{"localhost:3000"}))
 
 	s := &http.Server{
@@ -75,23 +73,17 @@ func main() {
 
 	go func() {
 		log.Println("Starting server on port 9090")
-
-		err = s.ListenAndServe()
-		if err != nil {
+		if err := s.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal(err)
-			os.Exit(1)
 		}
 	}()
 
-	// trap sigterm or interupt and gracefully shutdown the server
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	signal.Notify(c, os.Kill)
-
-	// Block until a signal is received.
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	sig := <-c
 	log.Println("Got signal:", sig)
 
-	// gracefully shutdown the server, waiting max 30 seconds for current operations to complete
-	s.Shutdown(ctx)
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
+	s.Shutdown(shutdownCtx)
 }
