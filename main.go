@@ -42,24 +42,33 @@ func main() {
 	}
 
 	sm := mux.NewRouter()
-	sm.Use(web.MiddlewareIsAuth(store))
 
+	// Public routes (no auth required)
 	postRouter := sm.Methods(http.MethodPost).Subrouter()
 	postRouter.HandleFunc("/signup", handlers.SignUp(users))
 	postRouter.HandleFunc("/signin", handlers.SignIn(users, store))
-	postRouter.HandleFunc("/users/{username:[a-zA-Z0-9]+}/portfolio", handlers.AddPortfolio(users))
-	postRouter.HandleFunc("/users/{username:[a-zA-Z0-9]+}/portfolio/{name:[a-zA-Z0-9]+}/transactions", handlers.AddTransaction(users))
 
-	getRouter := sm.Methods(http.MethodGet).Subrouter()
-	getRouter.HandleFunc("/users", handlers.GetUsers(users))
-	getRouter.HandleFunc("/users/{username:[a-zA-Z0-9]+}", handlers.GetUser(users))
-	getRouter.HandleFunc("/users/{username:[a-zA-Z0-9]+}/portfolio/{name:[a-zA-Z0-9]+}/transactions", handlers.GetTransactions(users))
+	// Protected routes (require auth)
+	protected := sm.PathPrefix("/").Subrouter()
+	protected.Use(web.MiddlewareIsAuth(store))
 
-	putRouter := sm.Methods(http.MethodPut).Subrouter()
-	putRouter.HandleFunc("/users/{username:[a-zA-Z0-9]+}", handlers.UpdateUser(users))
+	protectedPost := protected.Methods(http.MethodPost).Subrouter()
+	protectedPost.HandleFunc("/users/{username:[a-zA-Z0-9]+}/portfolio", handlers.AddPortfolio(users))
+	protectedPost.HandleFunc("/users/{username:[a-zA-Z0-9]+}/portfolio/{name:[a-zA-Z0-9]+}/transactions", handlers.AddTransaction(users))
 
-	deleteRouter := sm.Methods(http.MethodDelete).Subrouter()
-	deleteRouter.HandleFunc("/users/{username:[a-zA-Z0-9]+}", handlers.DeleteUser(users))
+	protectedGet := protected.Methods(http.MethodGet).Subrouter()
+	protectedGet.HandleFunc("/users", handlers.GetUsers(users))
+	protectedGet.HandleFunc("/users/{username:[a-zA-Z0-9]+}", handlers.GetUser(users))
+	protectedGet.HandleFunc("/users/{username:[a-zA-Z0-9]+}/portfolio/{name:[a-zA-Z0-9]+}/transactions", handlers.GetTransactions(users))
+
+	protectedPut := protected.Methods(http.MethodPut).Subrouter()
+	protectedPut.HandleFunc("/users/{username:[a-zA-Z0-9]+}", handlers.UpdateUser(users))
+
+	protectedDelete := protected.Methods(http.MethodDelete).Subrouter()
+	protectedDelete.HandleFunc("/users/{username:[a-zA-Z0-9]+}", handlers.DeleteUser(users))
+
+	// Serve static files from frontend directory (no auth required)
+	sm.PathPrefix("/").Handler(http.StripPrefix("/", http.FileServer(http.Dir("./frontend/"))))
 
 	ch := gohandlers.CORS(gohandlers.AllowedOrigins([]string{"localhost:3000"}))
 

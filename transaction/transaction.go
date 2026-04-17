@@ -57,6 +57,7 @@ func (t Transaction) NewTransaction() (ValueObject, error) {
 			UserName:      t.UserName,
 			PortfolioName: t.PortfolioName,
 			Symbol:        t.Symbol,
+			Type:          t.Type,
 			Quantity:      t.Quantity,
 			Price:         t.Price,
 			Created:       t.Created,

@@ -1,11 +1,13 @@
 package user
 
 import (
-	"errors"
 	"fmt"
-	"github.com/shopspring/decimal"
-	"github.com/szucik/trade-helper/portfolio"
 	"math/rand"
+	"net/http"
+
+	"github.com/shopspring/decimal"
+	"github.com/szucik/trade-helper/apperrors"
+	"github.com/szucik/trade-helper/portfolio"
 )
 
 type Aggregate struct {
@@ -37,7 +39,7 @@ func (a *Aggregate) AddPortfolio(entity portfolio.Entity) error {
 
 	for _, item := range a.portfolios {
 		if item.Portfolio().Name == portfolio.Name {
-			return errors.New("this name is not available")
+			return apperrors.Error("portfolio name already taken", "Conflict", http.StatusConflict)
 		}
 	}
 
@@ -59,7 +61,7 @@ func (a *Aggregate) UpdatePortfolioTotalCost(name string, delta decimal.Decimal)
 			return nil
 		}
 	}
-	return errors.New("portfolio not found")
+	return apperrors.Error("portfolio not found", "NotFound", http.StatusNotFound)
 }
 
 func (a *Aggregate) FindPortfolio(name string) (portfolio.Portfolio, error) {
@@ -70,7 +72,7 @@ func (a *Aggregate) FindPortfolio(name string) (portfolio.Portfolio, error) {
 		}
 	}
 
-	return portfolio.Portfolio{}, errors.New("the specified portfolio does not exist")
+	return portfolio.Portfolio{}, apperrors.Error("portfolio not found", "NotFound", http.StatusNotFound)
 }
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"

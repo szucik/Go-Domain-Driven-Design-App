@@ -1,9 +1,9 @@
 package apperrors
 
 import (
-	"net/http"
-
 	"encoding/json"
+	"errors"
+	"net/http"
 
 	"github.com/google/uuid"
 )
@@ -33,4 +33,9 @@ func Error(message, errorType string, code int) ErrorResponse {
 		Message: message,
 		Type:    errorType,
 	}
+}
+
+func IsNotFound(err error) bool {
+	var e ErrorResponse
+	return errors.As(err, &e) && e.Code == http.StatusNotFound
 }

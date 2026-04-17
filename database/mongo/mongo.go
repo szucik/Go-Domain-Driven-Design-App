@@ -2,15 +2,19 @@ package mongo
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
+	"time"
 
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/bson/primitive"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
 
-	"github.com/szucik/trade-helper/portfolio"
+	"github.com/szucik/trade-helper/apperrors"
 	"github.com/szucik/trade-helper/transaction"
 	"github.com/szucik/trade-helper/user"
 	"github.com/szucik/trade-helper/user/document"
@@ -22,8 +26,53 @@ type Repository struct {
 }
 
 type Document struct {
-	User       user.User          `bson:"user"`
-	Portfolios []portfolio.Entity `bson:"portfolios"`
+	User       user.User                    `bson:"user"`
+	Portfolios []document.PortfolioDocument `bson:"portfolios"`
+}
+
+type transactionDocument struct {
+	ID            uuid.UUID                   `bson:"id"`
+	UserName      string                      `bson:"username"`
+	PortfolioName string                      `bson:"portfolio_name"`
+	Symbol        string                      `bson:"symbol"`
+	Type          transaction.TransactionType `bson:"type"`
+	Quantity      string                      `bson:"quantity"`
+	Price         string                      `bson:"price"`
+	Created       time.Time                   `bson:"created"`
+}
+
+func toTransactionDocument(t transaction.Transaction) transactionDocument {
+	return transactionDocument{
+		ID:            t.ID,
+		UserName:      t.UserName,
+		PortfolioName: t.PortfolioName,
+		Symbol:        t.Symbol,
+		Type:          t.Type,
+		Quantity:      t.Quantity.String(),
+		Price:         t.Price.String(),
+		Created:       t.Created,
+	}
+}
+
+func (d transactionDocument) toValueObject() (transaction.ValueObject, error) {
+	qty, err := decimal.NewFromString(d.Quantity)
+	if err != nil {
+		return transaction.ValueObject{}, fmt.Errorf("invalid quantity %q: %w", d.Quantity, err)
+	}
+	price, err := decimal.NewFromString(d.Price)
+	if err != nil {
+		return transaction.ValueObject{}, fmt.Errorf("invalid price %q: %w", d.Price, err)
+	}
+	return transaction.Transaction{
+		ID:            d.ID,
+		UserName:      d.UserName,
+		PortfolioName: d.PortfolioName,
+		Symbol:        d.Symbol,
+		Type:          d.Type,
+		Quantity:      qty,
+		Price:         price,
+		Created:       d.Created,
+	}.NewTransaction()
 }
 
 func NewDatabase(ctx context.Context) (Repository, error) {
@@ -62,6 +111,9 @@ func (r Repository) SignUp(ctx context.Context, aggregate user.Aggregate) (strin
 	doc := document.NewDocument(aggregate)
 	_, err := r.users.InsertOne(ctx, doc)
 	if err != nil {
+		if mongo.IsDuplicateKeyError(err) {
+			return "", apperrors.Error("registration failed", "Conflict", http.StatusConflict)
+		}
 		return "", err
 	}
 	return aggregate.User().Email, nil
@@ -71,6 +123,9 @@ func (r Repository) GetUserByName(ctx context.Context, userName string) (user.Ag
 	var result Document
 	filter := bson.D{{Key: "user.username", Value: userName}}
 	if err := r.users.FindOne(ctx, filter).Decode(&result); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return user.Aggregate{}, apperrors.Error("user not found", "NotFound", http.StatusNotFound)
+		}
 		return user.Aggregate{}, err
 	}
 	return result.toAggregate()
@@ -80,6 +135,9 @@ func (r Repository) GetUserByEmail(ctx context.Context, email string) (user.Aggr
 	var result Document
 	filter := bson.D{{Key: "user.email", Value: email}}
 	if err := r.users.FindOne(ctx, filter).Decode(&result); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return user.Aggregate{}, apperrors.Error("user not found", "NotFound", http.StatusNotFound)
+		}
 		return user.Aggregate{}, err
 	}
 	return result.toAggregate()
@@ -140,18 +198,18 @@ func (r Repository) DeleteUser(ctx context.Context, username string) error {
 		return fmt.Errorf("DeleteUser failed: %w", err)
 	}
 	if res.DeletedCount == 0 {
-		return fmt.Errorf("DeleteUser: user %q not found", username)
+		return apperrors.Error("user not found", "NotFound", http.StatusNotFound)
 	}
 	return nil
 }
 
 func (r Repository) AddTransaction(ctx context.Context, vo transaction.ValueObject) (string, error) {
-	t := vo.Transaction()
-	res, err := r.transactions.InsertOne(ctx, t)
+	doc := toTransactionDocument(vo.Transaction())
+	res, err := r.transactions.InsertOne(ctx, doc)
 	if err != nil {
 		return "", fmt.Errorf("AddTransaction failed: %w", err)
 	}
-	return res.InsertedID.(primitive.ObjectID).Hex(), nil
+	return res.InsertedID.(bson.ObjectID).Hex(), nil
 }
 
 func (r Repository) GetTransactions(ctx context.Context, username, portfolioName string) ([]transaction.ValueObject, error) {
@@ -164,14 +222,14 @@ func (r Repository) GetTransactions(ctx context.Context, username, portfolioName
 		return nil, fmt.Errorf("GetTransactions failed: %w", err)
 	}
 
-	var txns []transaction.Transaction
-	if err = cursor.All(ctx, &txns); err != nil {
+	var docs []transactionDocument
+	if err = cursor.All(ctx, &docs); err != nil {
 		return nil, fmt.Errorf("GetTransactions decode failed: %w", err)
 	}
 
-	result := make([]transaction.ValueObject, 0, len(txns))
-	for _, t := range txns {
-		vo, err := t.NewTransaction()
+	result := make([]transaction.ValueObject, 0, len(docs))
+	for _, d := range docs {
+		vo, err := d.toValueObject()
 		if err != nil {
 			return nil, err
 		}
@@ -181,16 +239,11 @@ func (r Repository) GetTransactions(ctx context.Context, username, portfolioName
 }
 
 func (d Document) toAggregate() (user.Aggregate, error) {
-	aggregate, err := d.User.NewAggregate()
-	if err != nil {
-		return user.Aggregate{}, err
+	doc := document.Document{
+		User:       d.User,
+		Portfolios: d.Portfolios,
 	}
-	for _, p := range d.Portfolios {
-		if err := aggregate.AddPortfolio(p); err != nil {
-			return user.Aggregate{}, err
-		}
-	}
-	return aggregate, nil
+	return doc.NewAggregate()
 }
 
 func connectWithMongoDB(ctx context.Context) (*mongo.Database, error) {
@@ -201,7 +254,7 @@ func connectWithMongoDB(ctx context.Context) (*mongo.Database, error) {
 	serverAPI := options.ServerAPI(options.ServerAPIVersion1)
 	opts := options.Client().ApplyURI(mongoURI).SetServerAPIOptions(serverAPI)
 
-	client, err := mongo.Connect(ctx, opts)
+	client, err := mongo.Connect(opts)
 	if err != nil {
 		return nil, fmt.Errorf("connection with Mongo failed: %w", err)
 	}
