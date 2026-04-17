@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TRADE.EXE</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:       #0a0e1a;
+      --panel:    #111827;
+      --card:     #0d1117;
+      --green:    #39ff14;
+      --blue:     #00d4ff;
+      --red:      #ff4d6d;
+      --gold:     #ffd166;
+      --purple:   #c084fc;
+      --gray:     #374151;
+      --muted:    #6b7280;
+      --text:     #9ca3af;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Press Start 2P', monospace;
+      background: var(--bg);
+      color: var(--green);
+      min-height: 100vh;
+      font-size: 10px;
+      line-height: 1.8;
+    }
+
+    /* Scanlines overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0,0,0,0.10) 0px, rgba(0,0,0,0.10) 1px,
+        transparent 1px, transparent 3px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ─── VIEWS ─── */
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ─── HEADER ─── */
+    .header {
+      background: var(--panel);
+      border-bottom: 3px solid var(--green);
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-logo {
+      font-size: 15px;
+      letter-spacing: 3px;
+      text-shadow: 0 0 14px var(--green);
+    }
+    .header-logo span { color: var(--blue); }
+    .header-player { font-size: 8px; color: var(--text); }
+    .header-player b { color: var(--green); }
+
+    /* ─── LAYOUT ─── */
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 20px;
+    }
+    .page-title {
+      font-size: 12px;
+      color: var(--blue);
+      letter-spacing: 2px;
+      text-shadow: 0 0 10px rgba(0,212,255,0.5);
+      margin-bottom: 24px;
+    }
+
+    /* ─── PANEL ─── */
+    .panel {
+      background: var(--panel);
+      border: 3px solid var(--green);
+      padding: 24px;
+      margin-bottom: 24px;
+      position: relative;
+    }
+    .panel::before {
+      content: '';
+      position: absolute;
+      inset: 5px;
+      border: 1px solid rgba(57,255,20,0.12);
+      pointer-events: none;
+    }
+    .panel-title {
+      font-size: 10px;
+      color: var(--green);
+      letter-spacing: 2px;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--gray);
+      text-shadow: 0 0 8px var(--green);
+    }
+    .panel-blue { border-color: var(--blue); }
+    .panel-blue::before { border-color: rgba(0,212,255,0.12); }
+    .panel-blue .panel-title { color: var(--blue); text-shadow: 0 0 8px var(--blue); }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      display: inline-block;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      padding: 12px 18px;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 1px;
+      transition: transform 0.08s, box-shadow 0.08s;
+      text-decoration: none;
+    }
+    .btn-green {
+      background: var(--green);
+      color: var(--bg);
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
+    }
+    .btn-green:hover  { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 rgba(0,0,0,0.6); }
+    .btn-green:active { transform: translate(3px,3px);   box-shadow: 1px 1px 0 rgba(0,0,0,0.6); }
+
+    .btn-blue {
+      background: var(--blue);
+      color: var(--bg);
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
+    }
+    .btn-blue:hover  { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 rgba(0,0,0,0.6); }
+    .btn-blue:active { transform: translate(3px,3px);   box-shadow: 1px 1px 0 rgba(0,0,0,0.6); }
+
+    .btn-red {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
+    }
+    .btn-red:hover  { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 rgba(0,0,0,0.6); }
+    .btn-red:active { transform: translate(3px,3px);   box-shadow: 1px 1px 0 rgba(0,0,0,0.6); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 2px solid var(--gray);
+      box-shadow: none;
+    }
+    .btn-ghost:hover { color: var(--green); border-color: var(--green); transform: none; box-shadow: none; }
+
+    .btn-sm  { font-size: 7px; padding: 8px 12px; }
+    .btn-full { width: 100%; text-align: center; }
+
+    /* ─── FORMS ─── */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: block;
+      font-size: 7px;
+      color: var(--muted);
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .form-input {
+      width: 100%;
+      background: var(--card);
+      border: 2px solid var(--gray);
+      color: var(--green);
+      padding: 12px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-input:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 10px rgba(57,255,20,0.2);
+    }
+    .form-input::placeholder { color: var(--gray); }
+    .form-select {
+      width: 100%;
+      background: var(--card);
+      border: 2px solid var(--gray);
+      color: var(--gold);
+      padding: 12px 36px 12px 12px;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 9px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath d='M0 0l5 7 5-7z' fill='%23ffd166'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+    }
+    .form-select:focus { border-color: var(--gold); }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    /* ─── MESSAGES ─── */
+    .msg { font-size: 8px; padding: 10px 14px; display: none; letter-spacing: 1px; margin-bottom: 16px; }
+    .msg.show { display: block; }
+    .msg-error   { border: 2px solid var(--red);   color: var(--red);   background: rgba(255,77,109,0.08); }
+    .msg-success { border: 2px solid var(--green); color: var(--green); background: rgba(57,255,20,0.06); }
+
+    /* ─── BLINK ─── */
+    .blink { animation: blink 1s step-end infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* ─────────────── AUTH ─────────────── */
+    .auth-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background:
+        radial-gradient(ellipse at 15% 50%, rgba(57,255,20,0.06) 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 50%, rgba(0,212,255,0.06) 0%, transparent 55%),
+        var(--bg);
+    }
+    .auth-box { width: 100%; max-width: 460px; }
+    .auth-logo { text-align: center; margin-bottom: 36px; }
+    .auth-logo-title {
+      font-size: 32px;
+      letter-spacing: 5px;
+      text-shadow: 0 0 24px var(--green), 0 0 50px rgba(57,255,20,0.25);
+      margin-bottom: 10px;
+    }
+    .auth-logo-sub { font-size: 8px; color: var(--blue); letter-spacing: 3px; margin-bottom: 8px; }
+    .auth-logo-hint { font-size: 7px; color: var(--muted); }
+
+    /* Tabs */
+    .tabs { display: flex; border-bottom: 3px solid var(--green); }
+    .tab {
+      padding: 11px 18px;
+      font-size: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      background: var(--card);
+      border: 3px solid transparent;
+      border-bottom: none;
+      margin-right: 4px;
+      margin-bottom: -3px;
+      letter-spacing: 1px;
+    }
+    .tab:hover { color: var(--green); }
+    .tab.active { background: var(--green); color: var(--bg); border-color: var(--green); }
+    .auth-panel { border-top: none; margin-top: 0; }
+
+    /* ─────────────── DASHBOARD ─────────────── */
+    .portfolio-grid { display: grid; gap: 12px; margin-bottom: 24px; }
+    .p-card {
+      background: var(--card);
+      border: 2px solid var(--gray);
+      padding: 18px 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: border-color 0.15s, transform 0.1s, box-shadow 0.1s;
+    }
+    .p-card:hover {
+      border-color: var(--green);
+      transform: translate(-3px,-3px);
+      box-shadow: 3px 3px 0 var(--green);
+    }
+    .p-card-name { font-size: 10px; color: var(--blue); margin-bottom: 8px; letter-spacing: 1px; }
+    .p-card-meta { font-size: 7px; color: var(--muted); }
+    .p-card-meta span { color: var(--gold); }
+    .p-card-arrow { font-size: 18px; color: var(--green); }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px 20px;
+      font-size: 8px;
+      color: var(--muted);
+      line-height: 3;
+      border: 2px dashed var(--gray);
+    }
+
+    /* ─────────────── PORTFOLIO ─────────────── */
+    .back-btn {
+      font-size: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 24px;
+      padding: 8px;
+      border: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .back-btn:hover { color: var(--green); border-color: var(--green); }
+
+    .stats-row {
+      display: flex;
+      gap: 0;
+      margin-bottom: 24px;
+      border: 2px solid var(--gray);
+    }
+    .stat-box {
+      flex: 1;
+      padding: 16px 20px;
+      border-right: 2px solid var(--gray);
+    }
+    .stat-box:last-child { border-right: none; }
+    .stat-label { font-size: 7px; color: var(--muted); letter-spacing: 1px; margin-bottom: 10px; }
+    .stat-val { font-size: 14px; text-shadow: 0 0 8px currentColor; }
+    .stat-val.gold  { color: var(--gold); }
+    .stat-val.green { color: var(--green); }
+    .stat-val.red   { color: var(--red); }
+    .stat-val.blue  { color: var(--blue); }
+
+    /* Order preview */
+    .order-preview {
+      background: var(--card);
+      border: 1px solid var(--gray);
+      padding: 12px 16px;
+      font-size: 8px;
+      color: var(--muted);
+      margin-bottom: 16px;
+      display: none;
+      letter-spacing: 1px;
+    }
+    .order-preview b { color: var(--gold); }
+
+    /* ─────────────── TOAST ─────────────── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 14px 20px;
+      font-size: 8px;
+      z-index: 1000;
+      display: none;
+      max-width: 320px;
+      line-height: 2;
+      animation: slideIn 0.2s ease;
+    }
+    .toast.ok  { background: var(--panel); border: 2px solid var(--green); color: var(--green); }
+    .toast.err { background: var(--panel); border: 2px solid var(--red);   color: var(--red); }
+    @keyframes slideIn { from{transform:translateX(120%);opacity:0} to{transform:translateX(0);opacity:1} }
+
+    /* ─────────────── LOADING ─────────────── */
+    .loading { font-size: 9px; color: var(--muted); padding: 24px; text-align: center; }
+
+    /* ─────────────── RESPONSIVE ─────────────── */
+    @media (max-width: 580px) {
+      .grid-2       { grid-template-columns: 1fr; }
+      .auth-logo-title { font-size: 22px; }
+      .stats-row    { flex-direction: column; }
+      .stat-box     { border-right: none; border-bottom: 2px solid var(--gray); }
+      .stat-box:last-child { border-bottom: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════ AUTH ══════════════════ -->
+<div id="view-auth" class="view active">
+  <div class="auth-wrap">
+    <div class="auth-box">
+
+      <div class="auth-logo">
+        <div class="auth-logo-title">TRADE<span style="color:var(--blue)">.</span>EXE</div>
+        <div class="auth-logo-sub">▓ PORTFOLIO TRACKER v1.0 ▓</div>
+        <div class="auth-logo-hint">INSERT COIN TO CONTINUE <span class="blink">█</span></div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" id="tab-login-btn" onclick="switchTab('login',this)">▶ LOGIN</div>
+        <div class="tab"       id="tab-register-btn" onclick="switchTab('register',this)">＋ REGISTER</div>
+      </div>
+
+      <div class="panel auth-panel">
+        <div id="msg-auth" class="msg"></div>
+
+        <!-- Login -->
+        <div id="tab-login">
+          <form onsubmit="handleSignIn(event)">
+            <div class="form-group">
+              <label class="form-label">◉ EMAIL ADDRESS</label>
+              <input id="l-email" type="email" class="form-input" placeholder="player@game.com" autocomplete="email" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">◉ PASSWORD</label>
+              <input id="l-pass" type="password" class="form-input" placeholder="••••••••" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="btn btn-green btn-full">▶ SIGN IN</button>
+          </form>
+        </div>
+
+        <!-- Register -->
+        <div id="tab-register" style="display:none">
+          <form onsubmit="handleSignUp(event)">
+            <div class="form-group">
+              <label class="form-label">◉ USERNAME</label>
+              <input id="r-user" type="text" class="form-input" placeholder="PLAYER_ONE" autocomplete="username" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">◉ EMAIL ADDRESS</label>
+              <input id="r-email" type="email" class="form-input" placeholder="player@game.com" autocomplete="email" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">◉ PASSWORD <span style="color:var(--muted)">(MIN 8 CHARS)</span></label>
+              <input id="r-pass" type="password" class="form-input" placeholder="••••••••" autocomplete="new-password" required>
+            </div>
+            <button type="submit" class="btn btn-green btn-full">▶ CREATE ACCOUNT</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ DASHBOARD ══════════════════ -->
+<div id="view-dashboard" class="view">
+  <div class="header">
+    <div class="header-logo">TRADE<span>.</span>EXE</div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="header-player">▓ PLAYER: <b id="h-user"></b></div>
+      <button class="btn btn-ghost btn-sm" onclick="handleLogout()">✕ LOGOUT</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="page-title">◉ MY PORTFOLIOS</div>
+
+    <div id="portfolio-list" class="portfolio-grid">
+      <div class="loading">LOADING <span class="blink">█</span></div>
+    </div>
+
+    <div class="panel panel-blue">
+      <div class="panel-title">＋ NEW PORTFOLIO</div>
+      <div id="msg-newportfolio" class="msg"></div>
+      <form onsubmit="handleAddPortfolio(event)">
+        <div class="grid-2" style="align-items:flex-end">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">◉ PORTFOLIO NAME</label>
+            <input id="p-name" type="text" class="form-input" placeholder="TECHSTOCKS" required
+              pattern="[a-zA-Z0-9]+" title="Letters and numbers only">
+          </div>
+          <button type="submit" class="btn btn-blue btn-full">▶ CREATE</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ PORTFOLIO ══════════════════ -->
+<div id="view-portfolio" class="view">
+  <div class="header">
+    <div class="header-logo">TRADE<span>.</span>EXE</div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="header-player">▓ PLAYER: <b id="h-user-2"></b></div>
+      <button class="btn btn-ghost btn-sm" onclick="handleLogout()">✕ LOGOUT</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="back-btn" onclick="showView('dashboard')">◀ BACK TO PORTFOLIOS</div>
+
+    <div class="page-title" id="pf-title">◉ PORTFOLIO</div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-label">TOTAL COST</div>
+        <div class="stat-val gold" id="s-cost">$0.00</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">TOTAL BALANCE</div>
+        <div class="stat-val green" id="s-balance">$0.00</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">P&amp;L</div>
+        <div class="stat-val" id="s-pnl">$0.00</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">CREATED</div>
+        <div class="stat-val blue" id="s-created" style="font-size:9px">—</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">⚡ ADD TRANSACTION</div>
+      <div id="msg-tx" class="msg"></div>
+      <form onsubmit="handleAddTransaction(event)">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">◉ SYMBOL</label>
+            <input id="tx-sym" type="text" class="form-input" placeholder="AAPL" required
+              oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">◉ ORDER TYPE</label>
+            <select id="tx-type" class="form-select">
+              <option value="buy">▲ BUY</option>
+              <option value="sell">▼ SELL</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">◉ QUANTITY</label>
+            <input id="tx-qty" type="number" step="0.00000001" min="0.00000001"
+              class="form-input" placeholder="10" required oninput="updatePreview()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">◉ PRICE PER UNIT ($)</label>
+            <input id="tx-price" type="number" step="0.01" min="0.01"
+              class="form-input" placeholder="150.00" required oninput="updatePreview()">
+          </div>
+        </div>
+        <div class="order-preview" id="order-preview">
+          ORDER TOTAL: <b id="order-total">$0.00</b>
+          &nbsp;|&nbsp; <span id="order-desc" style="color:var(--muted)"></span>
+        </div>
+        <button type="submit" class="btn btn-green">▶ EXECUTE ORDER</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="toast"></div>
+
+<script>
+// ═══════════════════ STATE ═══════════════════
+let currentUser = null;   // UserResponse
+let currentPf   = null;   // Portfolio object
+
+// ═══════════════════ VIEWS ═══════════════════
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + name).classList.add('active');
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'portfolio' && currentPf) renderPortfolio();
+}
+
+// ═══════════════════ AUTH TABS ═══════════════════
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-login').style.display    = name === 'login'    ? '' : 'none';
+  document.getElementById('tab-register').style.display = name === 'register' ? '' : 'none';
+  clearMsg('msg-auth');
+}
+
+// ═══════════════════ API ═══════════════════
+async function api(method, path, body) {
+  const opts = { method, credentials: 'include', headers: {} };
+  if (body) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const res  = await fetch(path, opts);
+  const text = await res.text();
+  if (!res.ok) throw new Error(text.trim() || 'HTTP ' + res.status);
+  try { return JSON.parse(text); } catch { return text.trim(); }
+}
+
+// ═══════════════════ TOAST ═══════════════════
+let toastTimer;
+function toast(msg, type = 'ok') {
+  const el = document.getElementById('toast');
+  el.textContent = (type === 'ok' ? '✓ ' : '✗ ') + msg;
+  el.className = 'toast ' + type;
+  el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.style.display = 'none', 3500);
+}
+
+function showMsg(id, text, type = 'error') {
+  const el = document.getElementById(id);
+  el.textContent = (type === 'error' ? '✗ ' : '✓ ') + text;
+  el.className = 'msg msg-' + (type === 'error' ? 'error' : 'success') + ' show';
+}
+function clearMsg(id) {
+  const el = document.getElementById(id);
+  if (el) el.className = 'msg';
+}
+
+// ═══════════════════ SIGN IN ═══════════════════
+async function handleSignIn(e) {
+  e.preventDefault();
+  clearMsg('msg-auth');
+  try {
+    const username = await api('POST', '/signin', {
+      email:    document.getElementById('l-email').value,
+      password: document.getElementById('l-pass').value,
+    });
+    await loadUser(username);
+    showView('dashboard');
+  } catch (err) {
+    showMsg('msg-auth', 'INVALID EMAIL OR PASSWORD');
+  }
+}
+
+// ═══════════════════ SIGN UP ═══════════════════
+async function handleSignUp(e) {
+  e.preventDefault();
+  clearMsg('msg-auth');
+  try {
+    await api('POST', '/signup', {
+      username: document.getElementById('r-user').value,
+      email:    document.getElementById('r-email').value,
+      password: document.getElementById('r-pass').value,
+    });
+    showMsg('msg-auth', 'ACCOUNT CREATED — PLEASE SIGN IN', 'success');
+    switchTab('login', document.getElementById('tab-login-btn'));
+  } catch (err) {
+    showMsg('msg-auth', err.message.toUpperCase());
+  }
+}
+
+// ═══════════════════ LOGOUT ═══════════════════
+function handleLogout() {
+  document.cookie = 'X-Auth-m-sz=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+  localStorage.removeItem('tradeexe_user');
+  currentUser = null;
+  currentPf   = null;
+  showView('auth');
+}
+
+// ═══════════════════ USER ═══════════════════
+async function loadUser(username) {
+  const data = await api('GET', '/users/' + username);
+  currentUser = data;
+  document.getElementById('h-user').textContent   = data.username.toUpperCase();
+  document.getElementById('h-user-2').textContent = data.username.toUpperCase();
+  localStorage.setItem('tradeexe_user', data.username);
+}
+
+// ═══════════════════ DASHBOARD ═══════════════════
+async function loadDashboard() {
+  if (!currentUser) return;
+  const listEl = document.getElementById('portfolio-list');
+  listEl.innerHTML = '<div class="loading">LOADING <span class="blink">█</span></div>';
+  try {
+    const data = await api('GET', '/users/' + currentUser.username);
+    currentUser = data;
+    renderPortfolioList(data.portfolios || []);
+  } catch {
+    listEl.innerHTML = '<div class="loading" style="color:var(--red)">✗ FAILED TO LOAD</div>';
+  }
+}
+
+function renderPortfolioList(portfolios) {
+  const el = document.getElementById('portfolio-list');
+  if (!portfolios.length) {
+    el.innerHTML = `<div class="empty-state">▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓<br>NO PORTFOLIOS YET<br>CREATE ONE BELOW<br>▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓</div>`;
+    return;
+  }
+  el.innerHTML = portfolios.map(p => `
+    <div class="p-card" onclick='openPortfolio(${JSON.stringify(p)})'>
+      <div>
+        <div class="p-card-name">▶ ${p.name.toUpperCase()}</div>
+        <div class="p-card-meta">COST: <span>${fmt(p.total_cost)}</span>
+          &nbsp;|&nbsp; BALANCE: <span>${fmt(p.total_balance)}</span></div>
+      </div>
+      <div class="p-card-arrow">▶</div>
+    </div>
+  `).join('');
+}
+
+async function handleAddPortfolio(e) {
+  e.preventDefault();
+  clearMsg('msg-newportfolio');
+  const name = document.getElementById('p-name').value.trim();
+  try {
+    await api('POST', `/users/${currentUser.username}/portfolio`, { name });
+    document.getElementById('p-name').value = '';
+    toast('PORTFOLIO CREATED: ' + name.toUpperCase());
+    await loadDashboard();
+  } catch (err) {
+    showMsg('msg-newportfolio', err.message.toUpperCase());
+  }
+}
+
+// ═══════════════════ PORTFOLIO ═══════════════════
+function openPortfolio(p) {
+  currentPf = p;
+  renderPortfolio();
+  showView('portfolio');
+}
+
+function renderPortfolio() {
+  const p = currentPf;
+  document.getElementById('pf-title').textContent = '◉ ' + p.name.toUpperCase();
+  document.getElementById('s-cost').textContent    = fmt(p.total_cost);
+  document.getElementById('s-balance').textContent = fmt(p.total_balance);
+
+  const pnl = parseFloat(p.total_profit_loss) || 0;
+  const pnlEl = document.getElementById('s-pnl');
+  pnlEl.textContent = (pnl >= 0 ? '+' : '') + fmt(p.total_profit_loss);
+  pnlEl.className = 'stat-val ' + (pnl > 0 ? 'green' : pnl < 0 ? 'red' : 'blue');
+
+  document.getElementById('s-created').textContent =
+    p.created ? new Date(p.created).toLocaleDateString('pl-PL') : '—';
+}
+
+async function handleAddTransaction(e) {
+  e.preventDefault();
+  clearMsg('msg-tx');
+  const sym   = document.getElementById('tx-sym').value.trim();
+  const qty   = document.getElementById('tx-qty').value;
+  const price = document.getElementById('tx-price').value;
+  const type  = document.getElementById('tx-type').value;
+
+  try {
+    await api('POST', `/users/${currentUser.username}/portfolio/${currentPf.name}/transactions`, {
+      symbol: sym, quantity: qty, amount: price, type,
+    });
+
+    document.getElementById('tx-sym').value   = '';
+    document.getElementById('tx-qty').value   = '';
+    document.getElementById('tx-price').value = '';
+    document.getElementById('order-preview').style.display = 'none';
+
+    toast(`${type.toUpperCase()} ${qty} ${sym} @ $${parseFloat(price).toFixed(2)}`);
+
+    // Refresh portfolio stats
+    const data = await api('GET', '/users/' + currentUser.username);
+    currentUser = data;
+    const updated = (data.portfolios || []).find(p => p.name === currentPf.name);
+    if (updated) { currentPf = updated; renderPortfolio(); }
+
+  } catch (err) {
+    showMsg('msg-tx', err.message.toUpperCase());
+  }
+}
+
+// ═══════════════════ ORDER PREVIEW ═══════════════════
+function updatePreview() {
+  const qty   = parseFloat(document.getElementById('tx-qty').value)   || 0;
+  const price = parseFloat(document.getElementById('tx-price').value) || 0;
+  const type  = document.getElementById('tx-type').value;
+  const sym   = document.getElementById('tx-sym').value   || '—';
+  const el    = document.getElementById('order-preview');
+
+  if (qty > 0 && price > 0) {
+    document.getElementById('order-total').textContent = fmt(qty * price);
+    document.getElementById('order-desc').textContent  =
+      `${type.toUpperCase()} ${qty} × ${sym} @ $${price}`;
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+// ═══════════════════ HELPERS ═══════════════════
+function fmt(val) {
+  const n = parseFloat(val) || 0;
+  return '$' + n.toFixed(2);
+}
+
+// ═══════════════════ INIT ═══════════════════
+(async () => {
+  const saved = localStorage.getItem('tradeexe_user');
+  if (saved) {
+    try {
+      await loadUser(saved);
+      showView('dashboard');
+    } catch {
+      localStorage.removeItem('tradeexe_user');
+    }
+  }
+})();
+</script>
+</body>
+</html>
