@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"fmt"
+	"github.com/shopspring/decimal"
 	"github.com/szucik/trade-helper/portfolio"
 	"math/rand"
 )
@@ -43,6 +44,22 @@ func (a *Aggregate) AddPortfolio(entity portfolio.Entity) error {
 	a.portfolios = append(a.portfolios, entity)
 
 	return nil
+}
+
+func (a *Aggregate) UpdatePortfolioTotalCost(name string, delta decimal.Decimal) error {
+	for i, p := range a.portfolios {
+		pto := p.Portfolio()
+		if pto.Name == name {
+			pto.TotalCost = pto.TotalCost.Add(delta)
+			entity, err := pto.NewPortfolio()
+			if err != nil {
+				return fmt.Errorf("UpdatePortfolioTotalCost: %w", err)
+			}
+			a.portfolios[i] = entity
+			return nil
+		}
+	}
+	return errors.New("portfolio not found")
 }
 
 func (a *Aggregate) FindPortfolio(name string) (portfolio.Portfolio, error) {

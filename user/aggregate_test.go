@@ -1,13 +1,14 @@
 package user_test
 
 import (
+	"testing"
+
 	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/szucik/trade-helper/clock"
 	pto "github.com/szucik/trade-helper/portfolio"
 	"github.com/szucik/trade-helper/user"
-	"testing"
 )
 
 var (
@@ -46,6 +47,49 @@ func TestPortfolio_AddPortfolio(t *testing.T) {
 		// then
 		name := instanceAggregate.Portfolios()[0].Portfolio().Name
 		assert.Equal(t, name, portfolio.Name)
+	})
+}
+
+func TestPortfolio_AddPortfolio_DuplicateName(t *testing.T) {
+	aggregate, err := user.User(testUser).NewAggregate()
+	require.NoError(t, err)
+
+	err = aggregate.AddPortfolio(instancePortfolio)
+	require.NoError(t, err)
+
+	t.Run("should return error when portfolio with same name already exists", func(t *testing.T) {
+		err := aggregate.AddPortfolio(instancePortfolio)
+		require.Error(t, err)
+	})
+}
+
+func TestAggregate_UpdatePortfolioTotalCost(t *testing.T) {
+	aggregate, err := user.User(testUser).NewAggregate()
+	require.NoError(t, err)
+
+	p, _ := pto.Portfolio{Name: "wallet", Created: clock.FakeTime()}.NewPortfolio()
+	require.NoError(t, aggregate.AddPortfolio(p))
+
+	t.Run("should update TotalCost by delta", func(t *testing.T) {
+		delta := decimal.NewFromFloat(300.00)
+		err := aggregate.UpdatePortfolioTotalCost("wallet", delta)
+		require.NoError(t, err)
+		updated, err := aggregate.FindPortfolio("wallet")
+		require.NoError(t, err)
+		assert.True(t, updated.TotalCost.Equal(delta))
+	})
+
+	t.Run("should accumulate TotalCost across multiple updates", func(t *testing.T) {
+		err := aggregate.UpdatePortfolioTotalCost("wallet", decimal.NewFromFloat(100.00))
+		require.NoError(t, err)
+		updated, err := aggregate.FindPortfolio("wallet")
+		require.NoError(t, err)
+		assert.True(t, updated.TotalCost.Equal(decimal.NewFromFloat(400.00)))
+	})
+
+	t.Run("should return error when portfolio does not exist", func(t *testing.T) {
+		err := aggregate.UpdatePortfolioTotalCost("nonexistent", decimal.NewFromFloat(100.00))
+		require.Error(t, err)
 	})
 }
 

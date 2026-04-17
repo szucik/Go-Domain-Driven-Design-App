@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/shopspring/decimal"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/szucik/trade-helper/clock"
@@ -29,7 +30,7 @@ func (p Portfolio) WithName(name string) Portfolio {
 }
 
 func TestPortfolio_NewPortfolio(t *testing.T) {
-	t.Run("should return an error when portfolio name", func(t *testing.T) {
+	t.Run("should return an error when portfolio name ", func(t *testing.T) {
 		testCases := map[string]struct {
 			p Portfolio
 		}{
@@ -38,6 +39,9 @@ func TestPortfolio_NewPortfolio(t *testing.T) {
 			},
 			"has unauthorized signs": {
 				p: portfolio.WithName("name123$!-+ "),
+			},
+			"contains only spaces": {
+				p: portfolio.WithName("   "),
 			},
 		}
 
@@ -49,5 +53,11 @@ func TestPortfolio_NewPortfolio(t *testing.T) {
 				require.Error(t, err)
 			})
 		}
+	})
+
+	t.Run("should create portfolio when name is valid", func(t *testing.T) {
+		entity, err := pto.Portfolio(portfolio).NewPortfolio()
+		require.NoError(t, err)
+		assert.Equal(t, portfolio.Name, entity.Portfolio().Name)
 	})
 }

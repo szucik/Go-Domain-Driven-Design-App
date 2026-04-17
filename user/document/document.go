@@ -18,9 +18,14 @@ func NewDocument(aggregate user.Aggregate) Document {
 }
 
 func (d *Document) NewAggregate() (user.Aggregate, error) {
-	aggregate, err := d.NewAggregate()
+	aggregate, err := d.User.NewAggregate()
 	if err != nil {
 		return user.Aggregate{}, err
+	}
+	for _, p := range d.Portfolios {
+		if err := aggregate.AddPortfolio(p); err != nil {
+			return user.Aggregate{}, err
+		}
 	}
 	return aggregate, nil
 }

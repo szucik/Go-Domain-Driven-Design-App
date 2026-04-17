@@ -43,6 +43,18 @@ func TestTransaction_NewTransaction(t *testing.T) {
 			"quantity is less than or equal to zero": {
 				instance: instance.WithQuantity(decimal.New(0, 0)),
 			},
+			"quantity is negative": {
+				instance: instance.WithQuantity(decimal.New(-1, 0)),
+			},
+			"userName contains only spaces": {
+				instance: instance.WithUserName("   "),
+			},
+			"symbol contains only spaces": {
+				instance: instance.WithSymbol("   "),
+			},
+			"portfolioName contains only spaces": {
+				instance: instance.WithPortfolioName("   "),
+			},
 		}
 
 		for name, testCase := range testCases {

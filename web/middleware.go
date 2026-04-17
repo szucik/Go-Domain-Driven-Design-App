@@ -3,26 +3,26 @@ package web
 import (
 	"net/http"
 
+	"github.com/gorilla/sessions"
+
 	"github.com/szucik/trade-helper/apperrors"
-	_ "github.com/szucik/trade-helper/portfolio"
 )
 
-func MiddlewareIsAuth(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		if r.RequestURI != "/signup" && r.RequestURI != "/signin" {
-			_, err := r.Cookie("X-Auth")
-			if err != nil {
-				if err == http.ErrNoCookie {
-					apperrors.Error("Invalid user", "BadRequest", 400).JSONError(rw)
-					rw.WriteHeader(http.StatusUnauthorized)
-					return
-				}
-				rw.WriteHeader(http.StatusBadRequest)
-				apperrors.Error("Bad data", "BadRequest", 400).JSONError(rw)
+func MiddlewareIsAuth(store *sessions.CookieStore) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			if r.RequestURI == "/signup" || r.RequestURI == "/signin" {
+				next.ServeHTTP(rw, r)
 				return
 			}
-		}
 
-		next.ServeHTTP(rw, r)
-	})
+			session, err := store.Get(r, "X-Auth")
+			if err != nil || session.Values["username"] == nil {
+				apperrors.Error("unauthorized", "Unauthorized", http.StatusUnauthorized).JSONError(rw)
+				return
+			}
+
+			next.ServeHTTP(rw, r)
+		})
+	}
 }

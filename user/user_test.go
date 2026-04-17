@@ -29,6 +29,12 @@ func TestUser_NewAggregate(t *testing.T) {
 			"password has less than 8 characters": {
 				user: testUser.WithPassword("1234567"),
 			},
+			"username has less than 2 characters": {
+				user: testUser.WithName("a"),
+			},
+			"username is empty": {
+				user: testUser.WithName(""),
+			},
 		}
 
 		for name, testCase := range testCases {
