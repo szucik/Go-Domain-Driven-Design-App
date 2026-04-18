@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/google/uuid"
@@ -11,6 +12,7 @@ import (
 	"github.com/shopspring/decimal"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/szucik/trade-helper/apperrors"
 	"github.com/szucik/trade-helper/portfolio"
 	"github.com/szucik/trade-helper/transaction"
 )
@@ -184,12 +186,12 @@ func (u Users) AddTransaction(ctx context.Context, in TransactionIn) (string, er
 
 	quantity, err := decimal.NewFromString(in.Quantity)
 	if err != nil {
-		return "", fmt.Errorf("service.AddTransaction invalid quantity: %w", err)
+		return "", apperrors.Error("invalid quantity format", "BadRequest", http.StatusBadRequest)
 	}
 
 	price, err := decimal.NewFromString(in.Amount)
 	if err != nil {
-		return "", fmt.Errorf("service.AddTransaction invalid amount: %w", err)
+		return "", apperrors.Error("invalid amount format", "BadRequest", http.StatusBadRequest)
 	}
 
 	txType := parseTransactionType(in.Type)
@@ -233,14 +235,21 @@ func (u Users) AddTransaction(ctx context.Context, in TransactionIn) (string, er
 }
 
 func (u Users) SignIn(ctx context.Context, auth AuthCredentials) (string, error) {
+	const invalidCredentials = "invalid credentials"
+
 	aggregate, err := u.Database.GetUserByEmail(ctx, auth.Email)
 	if err != nil {
-		return "", fmt.Errorf("service.SignIn: %w", err)
+		if !apperrors.IsNotFound(err) {
+			u.Logger.Printf("SignIn: unexpected database error: %v", err)
+		}
+		return "", apperrors.Error(invalidCredentials, "Unauthorized", http.StatusUnauthorized)
 	}
+
 	usr := aggregate.User()
 	if err = compareHashAndPassword(usr.Password, auth.Password); err != nil {
-		return "", err
+		return "", apperrors.Error(invalidCredentials, "Unauthorized", http.StatusUnauthorized)
 	}
+
 	u.Logger.Printf("SignIn: user %s authenticated", usr.Username)
 	return usr.Username, nil
 }
@@ -305,10 +314,7 @@ func hashPassword(password string) (string, error) {
 }
 
 func compareHashAndPassword(hashedPassword, password string) error {
-	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
-		return fmt.Errorf("compareHashAndPassword: %w", err)
-	}
-	return nil
+	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
 func transformToUserResponse(aggregate Aggregate) UserResponse {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -22,15 +21,15 @@ import (
 var testStore = sessions.NewCookieStore([]byte("test-secret"))
 
 type fakeService struct {
-	signUpFn         func(ctx context.Context, u user.User) (string, error)
-	signInFn         func(ctx context.Context, c user.AuthCredentials) (string, error)
-	getUsersFn       func(ctx context.Context, p user.PaginationIn) (user.UsersOut, error)
-	getUserByNameFn  func(ctx context.Context, name string) (user.UserResponse, error)
-	addPortfolioFn   func(ctx context.Context, in user.PortfolioIn) (string, error)
-	addTransactionFn func(ctx context.Context, in user.TransactionIn) (string, error)
+	signUpFn          func(ctx context.Context, u user.User) (string, error)
+	signInFn          func(ctx context.Context, c user.AuthCredentials) (string, error)
+	getUsersFn        func(ctx context.Context, p user.PaginationIn) (user.UsersOut, error)
+	getUserByNameFn   func(ctx context.Context, name string) (user.UserResponse, error)
+	addPortfolioFn    func(ctx context.Context, in user.PortfolioIn) (string, error)
+	addTransactionFn  func(ctx context.Context, in user.TransactionIn) (string, error)
 	getTransactionsFn func(ctx context.Context, username, portfolioName string) (user.TransactionsOut, error)
-	updateUserFn     func(ctx context.Context, username string, in user.UpdateUserIn) (string, error)
-	deleteUserFn     func(ctx context.Context, username string) error
+	updateUserFn      func(ctx context.Context, username string, in user.UpdateUserIn) (string, error)
+	deleteUserFn      func(ctx context.Context, username string) error
 }
 
 func (f *fakeService) SignUp(ctx context.Context, u user.User) (string, error) {
@@ -91,7 +90,7 @@ func TestSignUp_ReturnsUsername_WhenInputIsValid(t *testing.T) {
 	rw := httptest.NewRecorder()
 	handlers.SignUp(svc)(rw, r)
 
-	assert.Equal(t, http.StatusOK, rw.Code)
+	assert.Equal(t, http.StatusCreated, rw.Code)
 	assert.Contains(t, rw.Body.String(), "alice")
 }
 
@@ -144,10 +143,10 @@ func TestSignIn_ReturnsUsername_WhenCredentialsAreValid(t *testing.T) {
 	assert.Contains(t, rw.Body.String(), "alice")
 }
 
-func TestSignIn_Returns400_WhenCredentialsAreWrong(t *testing.T) {
+func TestSignIn_Returns401_WhenCredentialsAreWrong(t *testing.T) {
 	svc := &fakeService{
 		signInFn: func(_ context.Context, _ user.AuthCredentials) (string, error) {
-			return "", errors.New("invalid password")
+			return "", apperrors.Error("invalid credentials", "Unauthorized", http.StatusUnauthorized)
 		},
 	}
 	r := newRequest(t, http.MethodPost, "/signin", user.AuthCredentials{
@@ -156,7 +155,7 @@ func TestSignIn_Returns400_WhenCredentialsAreWrong(t *testing.T) {
 	rw := httptest.NewRecorder()
 	handlers.SignIn(svc, testStore)(rw, r)
 
-	assert.Equal(t, http.StatusInternalServerError, rw.Code)
+	assert.Equal(t, http.StatusUnauthorized, rw.Code)
 }
 
 func TestSignIn_Returns400_WhenRequiredFieldsMissing(t *testing.T) {
@@ -249,7 +248,7 @@ func TestAddPortfolio_ReturnsName_WhenInputIsValid(t *testing.T) {
 	rw := httptest.NewRecorder()
 	handlers.AddPortfolio(svc)(rw, r)
 
-	assert.Equal(t, http.StatusOK, rw.Code)
+	assert.Equal(t, http.StatusCreated, rw.Code)
 }
 
 func TestAddPortfolio_Returns400_WhenNameMissing(t *testing.T) {
@@ -279,7 +278,7 @@ func TestAddTransaction_ReturnsID_WhenInputIsValid(t *testing.T) {
 	rw := httptest.NewRecorder()
 	handlers.AddTransaction(svc)(rw, r)
 
-	assert.Equal(t, http.StatusOK, rw.Code)
+	assert.Equal(t, http.StatusCreated, rw.Code)
 	assert.Contains(t, rw.Body.String(), "txn-id-123")
 }
 

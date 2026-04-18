@@ -1,0 +1,32 @@
+<div id="view-dashboard" class="view">
+  <div class="header">
+    <div class="header-logo">TRADE<span>.</span>EXE</div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="header-player">▓ PLAYER: <b id="h-user"></b></div>
+      <button class="btn btn-ghost btn-sm" onclick="handleLogout()">✕ LOGOUT</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="page-title">◉ MY PORTFOLIOS</div>
+
+    <div id="portfolio-list" class="portfolio-grid">
+      <div class="loading">LOADING <span class="blink">█</span></div>
+    </div>
+
+    <div class="panel panel-blue">
+      <div class="panel-title">＋ NEW PORTFOLIO</div>
+      <div id="msg-newportfolio" class="msg"></div>
+      <form onsubmit="handleAddPortfolio(event)">
+        <div class="grid-2" style="align-items:flex-end">
+          <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">◉ PORTFOLIO NAME</label>
+            <input id="p-name" type="text" class="form-input" placeholder="TECHSTOCKS" required
+              pattern="[a-zA-Z0-9]+" title="Letters and numbers only">
+          </div>
+          <button type="submit" class="btn btn-blue btn-full">▶ CREATE</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

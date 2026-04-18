@@ -10,12 +10,12 @@ import (
 )
 
 type Portfolio struct {
-	Name            string          `json:"name,omitempty" validate:"required"`
-	TotalBalance    decimal.Decimal `json:"total_balance"`
-	TotalCost       decimal.Decimal `json:"total_cost"`
-	TotalProfitLoss decimal.Decimal `json:"total_profit_loss"`
-	ProfitLossDay   decimal.Decimal `json:"profit_loss_day"`
-	Created         time.Time       `json:"created"`
+	Name            string          `json:"name,omitempty"       bson:"name"               validate:"required"`
+	TotalBalance    decimal.Decimal `json:"total_balance"        bson:"total_balance"`
+	TotalCost       decimal.Decimal `json:"total_cost"           bson:"total_cost"`
+	TotalProfitLoss decimal.Decimal `json:"total_profit_loss"    bson:"total_profit_loss"`
+	ProfitLossDay   decimal.Decimal `json:"profit_loss_day"      bson:"profit_loss_day"`
+	Created         time.Time       `json:"created"              bson:"created"`
 }
 
 // Entity is an object with lifecycle (can be mutated by adding, removing and renaming). It can be embedded into other

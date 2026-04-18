@@ -15,7 +15,7 @@ func AddPortfolio(service user.UsersService) func(http.ResponseWriter, *http.Req
 		var p user.PortfolioIn
 
 		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-			writeError(rw, apperrors.Error(err.Error(), "BadRequest", http.StatusBadRequest))
+			writeError(rw, apperrors.Error("invalid request body", "BadRequest", http.StatusBadRequest))
 			return
 		}
 
@@ -31,7 +31,7 @@ func AddPortfolio(service user.UsersService) func(http.ResponseWriter, *http.Req
 			return
 		}
 
-		writeSuccessMessage(rw, []byte(name))
+		writeJSON(rw, http.StatusCreated, map[string]string{"name": name})
 	}
 }
 
@@ -41,7 +41,7 @@ func AddTransaction(service user.UsersService) func(http.ResponseWriter, *http.R
 		vars := mux.Vars(r)
 
 		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-			writeError(rw, apperrors.Error(err.Error(), "BadRequest", http.StatusBadRequest))
+			writeError(rw, apperrors.Error("invalid request body", "BadRequest", http.StatusBadRequest))
 			return
 		}
 
@@ -59,7 +59,7 @@ func AddTransaction(service user.UsersService) func(http.ResponseWriter, *http.R
 			return
 		}
 
-		writeSuccessMessage(rw, []byte(result))
+		writeJSON(rw, http.StatusCreated, map[string]string{"id": result})
 	}
 }
 
@@ -75,12 +75,6 @@ func GetTransactions(service user.UsersService) func(http.ResponseWriter, *http.
 			return
 		}
 
-		result, err := json.Marshal(out)
-		if err != nil {
-			writeError(rw, apperrors.Error(err.Error(), "MarshalError", http.StatusInternalServerError))
-			return
-		}
-
-		writeSuccessMessage(rw, result)
+		writeJSON(rw, http.StatusOK, out)
 	}
 }

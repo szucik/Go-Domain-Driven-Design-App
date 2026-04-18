@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -17,7 +18,7 @@ func SignUp(service user.UsersService) func(http.ResponseWriter, *http.Request) 
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var u user.User
 		if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
-			writeError(rw, apperrors.Error(err.Error(), "BadRequest", http.StatusBadRequest))
+			writeError(rw, apperrors.Error("invalid request body", "BadRequest", http.StatusBadRequest))
 			return
 		}
 
@@ -32,7 +33,7 @@ func SignUp(service user.UsersService) func(http.ResponseWriter, *http.Request) 
 			return
 		}
 
-		writeSuccessMessage(rw, []byte(username))
+		writeJSON(rw, http.StatusCreated, map[string]string{"username": username})
 	}
 }
 
@@ -40,7 +41,7 @@ func SignIn(service user.UsersService, store *sessions.CookieStore) func(http.Re
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var credentials user.AuthCredentials
 		if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
-			writeError(rw, apperrors.Error(err.Error(), "BadRequest", http.StatusBadRequest))
+			writeError(rw, apperrors.Error("invalid request body", "BadRequest", http.StatusBadRequest))
 			return
 		}
 
@@ -64,11 +65,11 @@ func SignIn(service user.UsersService, store *sessions.CookieStore) func(http.Re
 		session.Values["username"] = username
 
 		if err = session.Save(r, rw); err != nil {
-			writeError(rw, apperrors.Error(err.Error(), "SessionError", http.StatusInternalServerError))
+			writeError(rw, err)
 			return
 		}
 
-		writeSuccessMessage(rw, []byte(username))
+		writeJSON(rw, http.StatusOK, map[string]string{"username": username})
 	}
 }
 
@@ -85,13 +86,7 @@ func GetUsers(service user.UsersService) func(http.ResponseWriter, *http.Request
 			return
 		}
 
-		result, err := json.Marshal(out)
-		if err != nil {
-			writeError(rw, apperrors.Error(err.Error(), "MarshalError", http.StatusInternalServerError))
-			return
-		}
-
-		writeSuccessMessage(rw, result)
+		writeJSON(rw, http.StatusOK, out)
 	}
 }
 
@@ -103,13 +98,7 @@ func GetUser(service user.UsersService) func(http.ResponseWriter, *http.Request)
 			return
 		}
 
-		result, err := json.Marshal(u)
-		if err != nil {
-			writeError(rw, apperrors.Error(err.Error(), "MarshalError", http.StatusInternalServerError))
-			return
-		}
-
-		writeSuccessMessage(rw, result)
+		writeJSON(rw, http.StatusOK, u)
 	}
 }
 
@@ -117,7 +106,7 @@ func UpdateUser(service user.UsersService) func(http.ResponseWriter, *http.Reque
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var in user.UpdateUserIn
 		if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
-			writeError(rw, apperrors.Error(err.Error(), "BadRequest", http.StatusBadRequest))
+			writeError(rw, apperrors.Error("invalid request body", "BadRequest", http.StatusBadRequest))
 			return
 		}
 
@@ -133,7 +122,7 @@ func UpdateUser(service user.UsersService) func(http.ResponseWriter, *http.Reque
 			return
 		}
 
-		writeSuccessMessage(rw, []byte(updated))
+		writeJSON(rw, http.StatusOK, map[string]string{"username": updated})
 	}
 }
 
@@ -155,13 +144,14 @@ func writeError(rw http.ResponseWriter, err error) {
 		appErr.JSONError(rw)
 		return
 	}
-	http.Error(rw, err.Error(), http.StatusInternalServerError)
+	log.Printf("unexpected error: %v", err)
+	apperrors.Error("internal server error", "InternalError", http.StatusInternalServerError).JSONError(rw)
 }
 
-func writeSuccessMessage(rw http.ResponseWriter, result []byte) {
+func writeJSON(rw http.ResponseWriter, status int, v any) {
 	rw.Header().Set("Content-Type", "application/json")
-	rw.WriteHeader(http.StatusOK)
-	rw.Write(result)
+	rw.WriteHeader(status)
+	json.NewEncoder(rw).Encode(v)
 }
 
 func queryInt(r *http.Request, key string, def int) int {
