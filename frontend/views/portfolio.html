@@ -1,0 +1,71 @@
+<div id="view-portfolio" class="view">
+  <div class="header">
+    <div class="header-logo">TRADE<span>.</span>EXE</div>
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="header-player">▓ PLAYER: <b id="h-user-2"></b></div>
+      <button class="btn btn-ghost btn-sm" onclick="handleLogout()">✕ LOGOUT</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="back-btn" onclick="showView('dashboard')">◀ BACK TO PORTFOLIOS</div>
+
+    <div class="page-title" id="pf-title">◉ PORTFOLIO</div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-label">TOTAL COST</div>
+        <div class="stat-val gold" id="s-cost">$0.00</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">P&amp;L</div>
+        <div class="stat-val" id="s-pnl">$0.00</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">CREATED</div>
+        <div class="stat-val blue" id="s-created" style="font-size:9px">—</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">⚡ ADD TRANSACTION</div>
+      <div id="msg-tx" class="msg"></div>
+      <form onsubmit="handleAddTransaction(event)">
+        <div class="grid-2">
+          <div class="form-group">
+            <label class="form-label">◉ SYMBOL</label>
+            <input id="tx-sym" type="text" class="form-input" placeholder="AAPL" required
+              oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">◉ ORDER TYPE</label>
+            <select id="tx-type" class="form-select">
+              <option value="buy">▲ BUY</option>
+              <option value="sell">▼ SELL</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">◉ QUANTITY</label>
+            <input id="tx-qty" type="number" step="0.00000001" min="0.00000001"
+              class="form-input" placeholder="10" required oninput="updatePreview()">
+          </div>
+          <div class="form-group">
+            <label class="form-label">◉ PRICE PER UNIT ($)</label>
+            <input id="tx-price" type="number" step="0.01" min="0.01"
+              class="form-input" placeholder="150.00" required oninput="updatePreview()">
+          </div>
+        </div>
+        <div class="order-preview" id="order-preview">
+          ORDER TOTAL: <b id="order-total">$0.00</b>
+          &nbsp;|&nbsp; <span id="order-desc" style="color:var(--muted)"></span>
+        </div>
+        <button type="submit" class="btn btn-green">▶ EXECUTE ORDER</button>
+      </form>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">◎ TRANSACTION HISTORY</div>
+      <div id="tx-list"><div class="loading">LOADING <span class="blink">█</span></div></div>
+    </div>
+  </div>
+</div>

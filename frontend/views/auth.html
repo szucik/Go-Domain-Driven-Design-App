@@ -1,0 +1,54 @@
+<div id="view-auth" class="view active">
+  <div class="auth-wrap">
+    <div class="auth-box">
+
+      <div class="auth-logo">
+        <div class="auth-logo-title">TRADE<span style="color:var(--blue)">.</span>EXE</div>
+        <div class="auth-logo-sub">▓ PORTFOLIO TRACKER v1.0 ▓</div>
+        <div class="auth-logo-hint">INSERT COIN TO CONTINUE <span class="blink">█</span></div>
+      </div>
+
+      <div class="tabs">
+        <div class="tab active" id="tab-login-btn" onclick="switchTab('login',this)">▶ LOGIN</div>
+        <div class="tab"       id="tab-register-btn" onclick="switchTab('register',this)">＋ REGISTER</div>
+      </div>
+
+      <div class="panel auth-panel">
+        <div id="msg-auth" class="msg"></div>
+
+        <div id="tab-login">
+          <form onsubmit="handleSignIn(event)">
+            <div class="form-group">
+              <label class="form-label">◉ EMAIL ADDRESS</label>
+              <input id="l-email" type="email" class="form-input" placeholder="player@game.com" autocomplete="email" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">◉ PASSWORD</label>
+              <input id="l-pass" type="password" class="form-input" placeholder="••••••••" autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="btn btn-green btn-full">▶ SIGN IN</button>
+          </form>
+        </div>
+
+        <div id="tab-register" style="display:none">
+          <form onsubmit="handleSignUp(event)">
+            <div class="form-group">
+              <label class="form-label">◉ USERNAME</label>
+              <input id="r-user" type="text" class="form-input" placeholder="PLAYER_ONE" autocomplete="username" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">◉ EMAIL ADDRESS</label>
+              <input id="r-email" type="email" class="form-input" placeholder="player@game.com" autocomplete="email" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">◉ PASSWORD <span style="color:var(--muted)">(MIN 8 CHARS)</span></label>
+              <input id="r-pass" type="password" class="form-input" placeholder="••••••••" autocomplete="new-password" required>
+            </div>
+            <button type="submit" class="btn btn-green btn-full">▶ CREATE ACCOUNT</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
